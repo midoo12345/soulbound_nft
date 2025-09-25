@@ -144,7 +144,7 @@ const useNetworkAnalytics = (contract, options = {}) => {
       console.log('ABI sample:', abi.slice ? abi.slice(0, 3) : 'non-array ABI');
 
       // Get contract address
-      const targetAddress = contractAddress.SoulboundCertificateNFT || 
+      const targetAddress = contractAddress.sepolia.SoulboundCertificateNFT || 
                            (contractAddress.defaultNetwork && contractAddress[contractAddress.defaultNetwork]?.SoulboundCertificateNFT);
       
       if (!targetAddress) {

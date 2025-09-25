@@ -130,7 +130,7 @@ const useBlockchainStats = () => {
             }
 
             const contract = new ethers.Contract(
-                contractAddress.SoulboundCertificateNFT,
+                contractAddress.sepolia.SoulboundCertificateNFT,
                 contractABI.SoulboundCertificateNFT,
                 provider
             );

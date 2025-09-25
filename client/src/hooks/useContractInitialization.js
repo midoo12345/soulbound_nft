@@ -78,7 +78,7 @@ export const useContractInitialization = (
       // Initialize contract
       console.log('Initializing contract...');
       // Debug logging
-      console.log('Contract address:', contractAddress.SoulboundCertificateNFT);
+      console.log('Contract address:', contractAddress.sepolia.SoulboundCertificateNFT);
       
       // Detailed debug of ABI structure
       console.log('ABI structure type:', typeof contractABI);
@@ -125,7 +125,7 @@ export const useContractInitialization = (
 
       // Create the contract instance with better error handling
       try {
-        const targetAddress = contractAddress.SoulboundCertificateNFT || 
+        const targetAddress = contractAddress.sepolia.SoulboundCertificateNFT || 
                              (contractAddress.defaultNetwork && contractAddress[contractAddress.defaultNetwork]?.SoulboundCertificateNFT);
         
         if (!targetAddress) {

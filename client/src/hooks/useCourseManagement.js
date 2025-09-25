@@ -31,7 +31,7 @@ export const useCourseManagement = () => {
     if (needSigner) {
       const signer = await provider.getSigner();
       return new Contract(
-        contractAddress.SoulboundCertificateNFT,
+        contractAddress.sepolia.SoulboundCertificateNFT,
         contractABI.SoulboundCertificateNFT,
         signer
       );

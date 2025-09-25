@@ -65,7 +65,7 @@ const useHistoricalMetrics = (contract) => {
     try {
       const { Contract } = await import('ethers');
       fullContract = new Contract(
-        contractAddress.SoulboundCertificateNFT,
+        contractAddress.sepolia.SoulboundCertificateNFT,
         contractABI.SoulboundCertificateNFT,
         provider
       );

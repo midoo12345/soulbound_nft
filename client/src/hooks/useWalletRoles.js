@@ -33,7 +33,7 @@ const useWalletRoles = () => {
             
             const provider = new ethers.BrowserProvider(window.ethereum);
             const contractInstance = new ethers.Contract(
-                contractAddress.SoulboundCertificateNFT,
+                contractAddress.sepolia.SoulboundCertificateNFT,
                 contractABI.SoulboundCertificateNFT,
                 provider
             );
@@ -86,7 +86,7 @@ const useWalletRoles = () => {
         try {
             const provider = new ethers.BrowserProvider(window.ethereum);
             const contractInstance = new ethers.Contract(
-                contractAddress.SoulboundCertificateNFT,
+                contractAddress.sepolia.SoulboundCertificateNFT,
                 contractABI.SoulboundCertificateNFT,
                 provider
             );
