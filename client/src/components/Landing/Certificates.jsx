@@ -22,6 +22,7 @@ export default function Certificates() {
     const fetchRealCertificates = async () => {
       try {
         setLoading(true);
+        console.log('Starting certificate fetch...');
         
         // Try to connect to blockchain
         if (!window.ethereum) {
@@ -30,18 +31,22 @@ export default function Certificates() {
           return;
         }
 
+        console.log('MetaMask detected, connecting to blockchain...');
         const provider = new BrowserProvider(window.ethereum);
         const contract = new Contract(
-          contractAddress.SoulboundCertificateNFT,
+          contractAddress.sepolia.SoulboundCertificateNFT,
           contractABI.SoulboundCertificateNFT,
           provider
         );
 
         // Get total supply
+        console.log('Getting total supply...');
         const totalSupply = await contract.totalSupply();
         const total = Number(totalSupply);
+        console.log('Total supply:', total);
 
         if (total === 0) {
+          console.log('No certificates found');
           setLoading(false);
           return;
         }
@@ -50,18 +55,23 @@ export default function Certificates() {
         const numberOfCerts = Math.min(5, total);
         const tokenIds = [];
         
+        console.log(`Fetching ${numberOfCerts} certificates...`);
         for (let i = 0; i < numberOfCerts; i++) {
           try {
             const tokenId = await contract.tokenByIndex(total - 1 - i);
             tokenIds.push(Number(tokenId));
+            console.log(`Got token ID: ${tokenId}`);
           } catch (err) {
             console.log(`Error getting token at index ${i}:`, err);
           }
         }
 
+        console.log('Token IDs:', tokenIds);
         if (tokenIds.length > 0) {
           // Process certificates using your existing utility
+          console.log('Processing certificates...');
           const processedCerts = await processCertificatesBatch(contract, tokenIds);
+          console.log('Processed certificates:', processedCerts);
           setCertificates(processedCerts);
           setCurrentCertificate(processedCerts[0]);
         }

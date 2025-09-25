@@ -6,6 +6,31 @@ import useWalletRoles from '../../hooks/useWalletRoles';
 const AcademicStatsDisplay = ({ isMobile }) => {
     const [activeOrb, setActiveOrb] = useState(0);
     const [verificationLevels, setVerificationLevels] = useState([100, 95, 98]);
+    const [screenSize, setScreenSize] = useState('lg'); // Default to large screen
+
+    // Handle responsive screen size
+    useEffect(() => {
+        const updateScreenSize = () => {
+            if (typeof window !== 'undefined') {
+                const width = window.innerWidth;
+                if (width >= 1536) {
+                    setScreenSize('2xl');
+                } else if (width >= 1280) {
+                    setScreenSize('xl');
+                } else if (width >= 1024) {
+                    setScreenSize('lg');
+                } else if (width >= 768) {
+                    setScreenSize('md');
+                } else {
+                    setScreenSize('sm');
+                }
+            }
+        };
+
+        updateScreenSize();
+        window.addEventListener('resize', updateScreenSize);
+        return () => window.removeEventListener('resize', updateScreenSize);
+    }, []);
 
     // Fetch real blockchain data using the same hooks as Analytics
     const { 
@@ -66,6 +91,55 @@ const AcademicStatsDisplay = ({ isMobile }) => {
         };
     }, [isConnectedToBlockchain, blockchainLoading, realVerificationRate]);
 
+    // Helper functions for responsive sizing
+    const getSize = (sizeMap) => {
+        return sizeMap[screenSize] || sizeMap.lg;
+    };
+
+    const getOrbRadius = () => {
+        const radiusMap = {
+            '2xl': 250,
+            'xl': 220,
+            'lg': 180,
+            'md': 160,
+            'sm': 140
+        };
+        return isMobile ? 140 : getSize(radiusMap);
+    };
+
+    const getOrbSize = () => {
+        const sizeMap = {
+            '2xl': 'w-44 h-44',
+            'xl': 'w-40 h-40',
+            'lg': 'w-36 h-36',
+            'md': 'w-32 h-32',
+            'sm': 'w-28 h-28'
+        };
+        return getSize(sizeMap);
+    };
+
+    const getTextSize = () => {
+        const sizeMap = {
+            '2xl': 'text-2xl',
+            'xl': 'text-xl',
+            'lg': 'text-xl',
+            'md': 'text-lg',
+            'sm': 'text-base'
+        };
+        return getSize(sizeMap);
+    };
+
+    const getSubTextSize = () => {
+        const sizeMap = {
+            '2xl': 'text-sm',
+            'xl': 'text-sm',
+            'lg': 'text-xs',
+            'md': 'text-xs',
+            'sm': 'text-xs'
+        };
+        return getSize(sizeMap);
+    };
+
     const orbData = [
         {
             value: blockchainLoading ? '━━━' : realStats.certificates.toLocaleString(),
@@ -107,16 +181,16 @@ const AcademicStatsDisplay = ({ isMobile }) => {
             {/* Central Solar System */}
             <div className="absolute inset-0 flex items-center justify-center">
                 {/* Space Nebula Background */}
-                <div className={`absolute ${window.innerWidth >= 1536 ? 'w-[32rem] h-[32rem]' : window.innerWidth >= 1280 ? 'w-[30rem] h-[30rem]' : 'w-96 h-96'} bg-gradient-radial from-yellow-400/15 via-orange-500/12 to-red-500/10 rounded-full blur-3xl`}></div>
-                <div className={`absolute ${window.innerWidth >= 1536 ? 'w-[28rem] h-[28rem]' : window.innerWidth >= 1280 ? 'w-[26rem] h-[26rem]' : 'w-80 h-80'} bg-gradient-radial from-orange-400/10 via-yellow-500/8 to-transparent rounded-full blur-2xl`}></div>
+                <div className={`absolute ${screenSize === '2xl' ? 'w-[32rem] h-[32rem]' : screenSize === 'xl' ? 'w-[30rem] h-[30rem]' : 'w-96 h-96'} bg-gradient-radial from-yellow-400/15 via-orange-500/12 to-red-500/10 rounded-full blur-3xl`}></div>
+                <div className={`absolute ${screenSize === '2xl' ? 'w-[28rem] h-[28rem]' : screenSize === 'xl' ? 'w-[26rem] h-[26rem]' : 'w-80 h-80'} bg-gradient-radial from-orange-400/10 via-yellow-500/8 to-transparent rounded-full blur-2xl`}></div>
                 
                 {/* Solar Corona Rings */}
-                <div className={`absolute ${window.innerWidth >= 1536 ? 'w-[24rem] h-[24rem]' : window.innerWidth >= 1280 ? 'w-[22rem] h-[22rem]' : 'w-80 h-80'} border border-yellow-400/15 rounded-full animate-spin-slow`}></div>
-                <div className={`absolute ${window.innerWidth >= 1536 ? 'w-[20rem] h-[20rem]' : window.innerWidth >= 1280 ? 'w-[18rem] h-[18rem]' : 'w-60 h-60'} border border-orange-400/12 rounded-full animate-spin-slow`} style={{ animationDirection: 'reverse', animationDuration: '8s' }}></div>
-                <div className={`absolute ${window.innerWidth >= 1536 ? 'w-[16rem] h-[16rem]' : window.innerWidth >= 1280 ? 'w-[14rem] h-[14rem]' : 'w-40 h-40'} border border-red-400/10 rounded-full animate-spin-slow`} style={{ animationDuration: '6s' }}></div>
+                <div className={`absolute ${screenSize === '2xl' ? 'w-[24rem] h-[24rem]' : screenSize === 'xl' ? 'w-[22rem] h-[22rem]' : 'w-80 h-80'} border border-yellow-400/15 rounded-full animate-spin-slow`}></div>
+                <div className={`absolute ${screenSize === '2xl' ? 'w-[20rem] h-[20rem]' : screenSize === 'xl' ? 'w-[18rem] h-[18rem]' : 'w-60 h-60'} border border-orange-400/12 rounded-full animate-spin-slow`} style={{ animationDirection: 'reverse', animationDuration: '8s' }}></div>
+                <div className={`absolute ${screenSize === '2xl' ? 'w-[16rem] h-[16rem]' : screenSize === 'xl' ? 'w-[14rem] h-[14rem]' : 'w-40 h-40'} border border-red-400/10 rounded-full animate-spin-slow`} style={{ animationDuration: '6s' }}></div>
                 
                 {/* Solar Flares */}
-                <div className={`absolute ${window.innerWidth >= 1536 ? 'w-[22rem] h-[22rem]' : window.innerWidth >= 1280 ? 'w-[20rem] h-[20rem]' : 'w-72 h-72'} opacity-15`}>
+                <div className={`absolute ${screenSize === '2xl' ? 'w-[22rem] h-[22rem]' : screenSize === 'xl' ? 'w-[20rem] h-[20rem]' : 'w-72 h-72'} opacity-15`}>
                     {Array.from({ length: 8 }).map((_, i) => (
                         <div
                             key={i}
@@ -131,8 +205,8 @@ const AcademicStatsDisplay = ({ isMobile }) => {
                 </div>
                 
                 {/* Central Sun Core */}
-                <div className={`absolute ${window.innerWidth >= 1536 ? 'w-[12rem] h-[12rem]' : window.innerWidth >= 1280 ? 'w-[10rem] h-[10rem]' : 'w-32 h-32'} bg-gradient-radial from-yellow-300/60 via-orange-400/50 to-red-500/40 rounded-full`}></div>
-                <div className={`absolute ${window.innerWidth >= 1536 ? 'w-[8rem] h-[8rem]' : window.innerWidth >= 1280 ? 'w-[6rem] h-[6rem]' : 'w-24 h-24'} bg-gradient-radial from-yellow-200/70 via-yellow-300/60 to-orange-400/50 rounded-full`}></div>
+                <div className={`absolute ${screenSize === '2xl' ? 'w-[12rem] h-[12rem]' : screenSize === 'xl' ? 'w-[10rem] h-[10rem]' : 'w-32 h-32'} bg-gradient-radial from-yellow-300/60 via-orange-400/50 to-red-500/40 rounded-full`}></div>
+                <div className={`absolute ${screenSize === '2xl' ? 'w-[8rem] h-[8rem]' : screenSize === 'xl' ? 'w-[6rem] h-[6rem]' : 'w-24 h-24'} bg-gradient-radial from-yellow-200/70 via-yellow-300/60 to-orange-400/50 rounded-full`}></div>
             </div>
 
             {/* Floating Stats System */}
@@ -140,7 +214,7 @@ const AcademicStatsDisplay = ({ isMobile }) => {
                 {/* Active Orb Connections */}
                 {orbData.map((orb, index) => {
                     const angle = (index * 120) - 90;
-                    const radius = isMobile ? 140 : window.innerWidth >= 1536 ? 250 : window.innerWidth >= 1280 ? 220 : 180;
+                    const radius = getOrbRadius();
                     const x = Math.cos(angle * Math.PI / 180) * radius;
                     const y = Math.sin(angle * Math.PI / 180) * radius;
                     const isActive = activeOrb === index;
@@ -168,7 +242,7 @@ const AcademicStatsDisplay = ({ isMobile }) => {
                 
                 {orbData.map((orb, index) => {
                     const angle = (index * 120) - 90; // 120 degrees apart
-                    const radius = isMobile ? 140 : window.innerWidth >= 1536 ? 250 : window.innerWidth >= 1280 ? 220 : 180; // Wider on large screens
+                    const radius = getOrbRadius(); // Use responsive radius
                     const x = Math.cos(angle * Math.PI / 180) * radius;
                     const y = Math.sin(angle * Math.PI / 180) * radius;
                     const isActive = activeOrb === index;
@@ -183,7 +257,7 @@ const AcademicStatsDisplay = ({ isMobile }) => {
                             }}
                         >
                             {/* Planet Container */}
-                            <div className={`relative ${window.innerWidth >= 1536 ? 'w-44 h-44' : window.innerWidth >= 1280 ? 'w-40 h-40' : 'w-36 h-36'} rounded-full ${isActive ? 'animate-glow' : 'animate-pulse'} backdrop-blur-xl`} style={{
+                            <div className={`relative ${getOrbSize()} rounded-full ${isActive ? 'animate-glow' : 'animate-pulse'} backdrop-blur-xl`} style={{
                                 background: index === 0 ? 'linear-gradient(135deg, #3b82f6, #1d4ed8, #1e40af)' : 
                                            index === 1 ? 'linear-gradient(135deg, #8b5cf6, #7c3aed, #6d28d9)' : 
                                            'linear-gradient(135deg, #10b981, #059669, #047857)',
@@ -213,13 +287,13 @@ const AcademicStatsDisplay = ({ isMobile }) => {
                                 
                                 {/* Data Display */}
                                 <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-3">
-                                    <div className={`text-white font-black ${window.innerWidth >= 1536 ? 'text-2xl' : window.innerWidth >= 1280 ? 'text-xl' : 'text-xl'} font-mono mb-1 animate-gradient`}>
+                                    <div className={`text-white font-black ${getTextSize()} font-mono mb-1 animate-gradient`}>
                                         {orb.value}
                                     </div>
-                                    <div className={`text-white/90 ${window.innerWidth >= 1536 ? 'text-sm' : 'text-xs'} font-mono tracking-wider leading-tight`}>
+                                    <div className={`text-white/90 ${getSubTextSize()} font-mono tracking-wider leading-tight`}>
                                         {orb.label}
                                     </div>
-                                    <div className={`text-white/70 ${window.innerWidth >= 1536 ? 'text-sm' : 'text-xs'} font-mono tracking-wide mt-1`}>
+                                    <div className={`text-white/70 ${getSubTextSize()} font-mono tracking-wide mt-1`}>
                                         {orb.sublabel}
                                     </div>
                                 </div>
@@ -359,14 +433,14 @@ const AcademicStatsDisplay = ({ isMobile }) => {
                 })}
 
                 {/* Central Sun */}
-                <div className={`relative ${window.innerWidth >= 1536 ? 'w-32 h-32' : window.innerWidth >= 1280 ? 'w-28 h-28' : 'w-24 h-24'} rounded-full bg-gradient-radial from-yellow-400/40 via-orange-500/35 to-red-600/30`} style={{
+                <div className={`relative ${screenSize === '2xl' ? 'w-32 h-32' : screenSize === 'xl' ? 'w-28 h-28' : 'w-24 h-24'} rounded-full bg-gradient-radial from-yellow-400/40 via-orange-500/35 to-red-600/30`} style={{
                     boxShadow: `${isConnectedToBlockchain ? '0 0 8px #fbbf24/20, 0 0 15px #f59e0b/15' : '0 0 5px #fbbf24/15, 0 0 10px #f59e0b/10'}`,
                     filter: 'blur(0.5px)'
                 }}>
                     {/* Solar Core */}
-                    <div className={`${window.innerWidth >= 1536 ? 'w-20 h-20' : window.innerWidth >= 1280 ? 'w-18 h-18' : 'w-16 h-16'} bg-gradient-radial from-yellow-300/70 via-yellow-400/60 to-orange-500/50 rounded-full flex items-center justify-center`}>
-                        <div className={`${window.innerWidth >= 1536 ? 'w-10 h-10' : window.innerWidth >= 1280 ? 'w-9 h-9' : 'w-8 h-8'} bg-gradient-radial from-yellow-200/80 via-yellow-300/70 to-yellow-400/60 rounded-full animate-spin-slow flex items-center justify-center`}>
-                            <div className={`${window.innerWidth >= 1536 ? 'w-4 h-4' : 'w-3 h-3'} ${isConnectedToBlockchain ? 'bg-yellow-300/80' : 'bg-yellow-400/70'} rounded-full`}></div>
+                    <div className={`${screenSize === '2xl' ? 'w-20 h-20' : screenSize === 'xl' ? 'w-18 h-18' : 'w-16 h-16'} bg-gradient-radial from-yellow-300/70 via-yellow-400/60 to-orange-500/50 rounded-full flex items-center justify-center`}>
+                        <div className={`${screenSize === '2xl' ? 'w-10 h-10' : screenSize === 'xl' ? 'w-9 h-9' : 'w-8 h-8'} bg-gradient-radial from-yellow-200/80 via-yellow-300/70 to-yellow-400/60 rounded-full animate-spin-slow flex items-center justify-center`}>
+                            <div className={`${screenSize === '2xl' ? 'w-4 h-4' : 'w-3 h-3'} ${isConnectedToBlockchain ? 'bg-yellow-300/80' : 'bg-yellow-400/70'} rounded-full`}></div>
                         </div>
                     </div>
                     
