@@ -54,18 +54,19 @@ const useInstitutionStats = (contract, roleConstants, currentAccount) => {
         }
       });
 
-      // Verify each address still has the role (for accuracy)
+      // Verify each address still has the role AND authorization (for accuracy)
       // IMPORTANT: Exclude admins from institution counts
       const activeAddresses = [];
       const verificationPromises = Array.from(institutionsSet).map(async (address) => {
         try {
           const hasRole = await contract.hasRole(roleConstants.INSTITUTION_ROLE, address);
+          const isAuthorized = await contract.authorizedInstitutions(address);
           // Check if this address is an admin (we want to exclude admins from institution stats)
           const DEFAULT_ADMIN_ROLE = roleConstants.DEFAULT_ADMIN_ROLE || ethers.ZeroHash;
           const isAdmin = await contract.hasRole(DEFAULT_ADMIN_ROLE, address);
           
-          // Only include if they have institution role AND are not admins
-          if (hasRole && !isAdmin) {
+          // Only include if they have institution role AND authorization AND are not admins
+          if (hasRole && isAuthorized && !isAdmin) {
             activeAddresses.push(address);
           }
         } catch (err) {
@@ -251,7 +252,7 @@ const useInstitutionStats = (contract, roleConstants, currentAccount) => {
             // Check if this block contains relevant events
             const { Contract } = await import('ethers');
             const fullContract = new Contract(
-              contractAddress.SoulboundCertificateNFT,
+              contractAddress.sepolia.SoulboundCertificateNFT,
               contractABI.SoulboundCertificateNFT,
               provider
             );
