@@ -200,18 +200,6 @@ const QRCodeModal = ({ showQRModal, certificate, closeQRModal, userWallet }) => 
             </div>
           )}
           
-          {/* Debug information for production troubleshooting */}
-          {process.env.NODE_ENV === 'production' && (
-            <div className="bg-gray-900 border border-gray-600 text-gray-300 px-3 py-2 rounded mb-4 text-xs">
-              <p className="font-medium mb-1">🔧 Debug Info:</p>
-              <p>Origin: {window.location.origin}</p>
-              <p>Certificate ID: {certificate?.id}</p>
-              <p>Student: {certificate?.student?.substring(0, 10)}...</p>
-              <p>Duration: {selectedDuration}h</p>
-              <p>Generated: {generatedAt?.toISOString()}</p>
-            </div>
-          )}
-          
           <div className="flex flex-col sm:flex-row justify-center gap-2 sm:gap-3">
             <button
               onClick={downloadQRCode}
