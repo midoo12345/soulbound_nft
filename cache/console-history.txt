@@ -1,6 +1,0 @@
-.exit
-exit
-const role = await c.DEFAULT_ADMIN_ROLE();
-const c = await ethers.getContractAt("SoulboundCertificateNFT", addr);
-const me = "0x52EEbDFt
-const addr = "0x1F98bEFDAeaDAf126308B1463B5f0eD504263049"; // contract address
