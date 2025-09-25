@@ -1,0 +1,7 @@
+export { default as HowItWork } from './HowItWork'
+export { default as HeroEnhanced } from './HeroEnhanced'
+export { default as Features } from './features'
+export { default as Team } from './Team'
+export { default as Certificates } from './Certificates'
+export { default as NavigationSidebar } from './NavigationSidebar'
+export { default as CertificateChecker } from './CertificateChecker'

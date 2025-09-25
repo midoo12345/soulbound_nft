@@ -1,0 +1,1172 @@
+/* DNA Soul Certificate Animations */
+
+@keyframes quantumFloat {
+  0%, 100% {
+    transform: translateY(0px) rotate(0deg);
+  }
+  25% {
+    transform: translateY(-10px) rotate(90deg);
+  }
+  50% {
+    transform: translateY(-20px) rotate(180deg);
+  }
+  75% {
+    transform: translateY(-10px) rotate(270deg);
+  }
+}
+
+@keyframes dnaSpiral {
+  0% {
+    transform: rotateY(0deg) rotateX(0deg);
+  }
+  25% {
+    transform: rotateY(90deg) rotateX(15deg);
+  }
+  50% {
+    transform: rotateY(180deg) rotateX(0deg);
+  }
+  75% {
+    transform: rotateY(270deg) rotateX(-15deg);
+  }
+  100% {
+    transform: rotateY(360deg) rotateX(0deg);
+  }
+}
+
+@keyframes soulPulse {
+  0%, 100% {
+    opacity: 0.6;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.1);
+  }
+}
+
+@keyframes soulGlow {
+  0%, 100% {
+    box-shadow: 0 0 20px rgba(147, 51, 234, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 40px rgba(147, 51, 234, 0.6), 0 0 60px rgba(59, 130, 246, 0.3);
+  }
+}
+
+@keyframes scanLine {
+  0% {
+    transform: translateY(-100%);
+    opacity: 0;
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(100vh);
+    opacity: 0;
+  }
+}
+
+@keyframes levitate {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-20px);
+  }
+}
+
+@keyframes levitateDelayed {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-15px);
+  }
+}
+
+@keyframes spinSlow {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes glow {
+  0%, 100% {
+    text-shadow: 0 0 10px rgba(59, 130, 246, 0.5);
+  }
+  50% {
+    text-shadow: 0 0 20px rgba(59, 130, 246, 0.8), 0 0 30px rgba(147, 51, 234, 0.5);
+  }
+}
+
+@keyframes dnaUnwind {
+  0% {
+    transform: rotateY(0deg) scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: rotateY(180deg) scale(1.1);
+    opacity: 0.8;
+  }
+  100% {
+    transform: rotateY(360deg) scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes soulEnergy {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+@keyframes particleFloat {
+  0%, 100% {
+    transform: translateY(0px) translateX(0px);
+  }
+  25% {
+    transform: translateY(-5px) translateX(5px);
+  }
+  50% {
+    transform: translateY(-10px) translateX(0px);
+  }
+  75% {
+    transform: translateY(-5px) translateX(-5px);
+  }
+}
+
+/* Utility classes */
+.animate-quantum-float {
+  animation: quantumFloat 4s ease-in-out infinite;
+}
+
+.animate-dna-spiral {
+  animation: dnaSpiral 8s ease-in-out infinite;
+}
+
+.animate-soul-pulse {
+  animation: soulPulse 2s ease-in-out infinite;
+}
+
+.animate-soul-glow {
+  animation: soulGlow 3s ease-in-out infinite;
+}
+
+.animate-scan-line {
+  animation: scanLine 2s linear infinite;
+}
+
+.animate-levitate {
+  animation: levitate 3s ease-in-out infinite;
+}
+
+.animate-levitate-delayed {
+  animation: levitateDelayed 3s ease-in-out infinite 1.5s;
+}
+
+.animate-spin-slow {
+  animation: spinSlow 8s linear infinite;
+}
+
+.animate-glow {
+  animation: glow 2s ease-in-out infinite;
+}
+
+.animate-dna-unwind {
+  animation: dnaUnwind 1s ease-in-out;
+}
+
+.animate-soul-energy {
+  animation: soulEnergy 3s ease-in-out infinite;
+}
+
+.animate-particle-float {
+  animation: particleFloat 6s ease-in-out infinite;
+}
+
+/* DNA helix specific styles */
+.dna-helix {
+  transform-style: preserve-3d;
+  perspective: 1000px;
+}
+
+.dna-strand {
+  transform-style: preserve-3d;
+}
+
+.dna-node {
+  transform-style: preserve-3d;
+}
+
+/* Soul status colors */
+.soul-verified {
+  color: #FCD34D;
+  text-shadow: 0 0 10px rgba(252, 211, 77, 0.5);
+}
+
+.soul-pending {
+  color: #60A5FA;
+  text-shadow: 0 0 10px rgba(96, 165, 250, 0.5);
+}
+
+.soul-revoked {
+  color: #F87171;
+  text-shadow: 0 0 10px rgba(248, 113, 113, 0.5);
+}
+
+.soul-burned {
+  color: #6B7280;
+  text-shadow: 0 0 10px rgba(107, 114, 128, 0.5);
+}
+
+/* Mystical background effects */
+.mystical-bg {
+  background: radial-gradient(ellipse at center, rgba(30, 41, 59, 0.8) 0%, rgba(15, 23, 42, 0.95) 100%);
+}
+
+.soul-gradient {
+  background: linear-gradient(135deg, rgba(147, 51, 234, 0.1) 0%, rgba(59, 130, 246, 0.1) 100%);
+}
+
+/* Portal effects */
+.portal-door {
+  transform-style: preserve-3d;
+  perspective: 1000px;
+}
+
+.portal-seal {
+  background: conic-gradient(from 0deg, transparent, rgba(147, 51, 234, 0.5), transparent);
+  animation: spinSlow 4s linear infinite;
+}
+
+/* Soul Action Button Effects */
+.soul-action-button {
+  position: relative;
+  overflow: hidden;
+}
+
+.soul-action-button::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  transition: left 0.5s;
+}
+
+.soul-action-button:hover::before {
+  left: 100%;
+}
+
+.soul-action-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+}
+
+/* Mystical button glow effects */
+.btn-metadata:hover {
+  box-shadow: 0 0 20px rgba(147, 51, 234, 0.5), 0 0 40px rgba(147, 51, 234, 0.3);
+}
+
+.btn-view:hover {
+  box-shadow: 0 0 20px rgba(59, 130, 246, 0.5), 0 0 40px rgba(59, 130, 246, 0.3);
+}
+
+.btn-qr:hover {
+  box-shadow: 0 0 20px rgba(20, 184, 166, 0.5), 0 0 40px rgba(20, 184, 166, 0.3);
+}
+
+/* Soul Reading Modal Effects */
+.soul-reading-modal {
+  background: linear-gradient(135deg, rgba(15, 23, 42, 0.95) 0%, rgba(30, 41, 59, 0.95) 100%);
+  backdrop-filter: blur(20px);
+  border: 2px solid rgba(147, 51, 234, 0.3);
+  box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5), 0 0 100px rgba(147, 51, 234, 0.1);
+}
+
+.soul-data-section {
+  background: linear-gradient(135deg, rgba(30, 41, 59, 0.8) 0%, rgba(51, 65, 85, 0.8) 100%);
+  border: 1px solid rgba(96, 165, 250, 0.2);
+  transition: all 0.3s ease;
+}
+
+.soul-data-section:hover {
+  border-color: rgba(96, 165, 250, 0.4);
+  box-shadow: 0 0 20px rgba(96, 165, 250, 0.1);
+}
+
+.soul-metric-bar {
+  background: linear-gradient(90deg, rgba(147, 51, 234, 0.3) 0%, rgba(59, 130, 246, 0.3) 100%);
+  border-radius: 9999px;
+  overflow: hidden;
+  position: relative;
+}
+
+.soul-metric-bar::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+  animation: shimmer 2s infinite;
+}
+
+@keyframes shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+.soul-raw-data {
+  background: linear-gradient(135deg, rgba(0, 0, 0, 0.8) 0%, rgba(15, 23, 42, 0.8) 100%);
+  border: 1px solid rgba(34, 197, 94, 0.3);
+  font-family: 'Courier New', monospace;
+}
+
+.soul-raw-data:hover {
+  border-color: rgba(34, 197, 94, 0.5);
+  box-shadow: 0 0 20px rgba(34, 197, 94, 0.1);
+}
+
+/* Custom Scrollbar for Soul Reading Modal */
+.soul-reading-modal ::-webkit-scrollbar {
+  width: 8px;
+}
+
+.soul-reading-modal ::-webkit-scrollbar-track {
+  background: rgba(30, 41, 59, 0.3);
+  border-radius: 4px;
+}
+
+.soul-reading-modal ::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, rgba(147, 51, 234, 0.6) 0%, rgba(59, 130, 246, 0.6) 100%);
+  border-radius: 4px;
+  transition: all 0.3s ease;
+}
+
+.soul-reading-modal ::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, rgba(147, 51, 234, 0.8) 0%, rgba(59, 130, 246, 0.8) 100%);
+}
+
+/* Firefox scrollbar */
+.soul-reading-modal {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(147, 51, 234, 0.6) rgba(30, 41, 59, 0.3);
+}
+
+/* Prevent horizontal overflow for long hashes */
+.soul-data-section {
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  hyphens: auto;
+}
+
+.soul-data-section a {
+  word-break: break-all;
+  overflow-wrap: anywhere;
+}
+
+/* DNA Soul Panel Styling */
+.dna-soul-panel {
+  background: linear-gradient(135deg, rgba(15, 23, 42, 0.9) 0%, rgba(30, 41, 59, 0.9) 100%);
+  border: 1px solid rgba(147, 51, 234, 0.3);
+  backdrop-filter: blur(10px);
+  position: relative;
+  overflow: hidden;
+}
+
+.dna-soul-panel::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, rgba(147, 51, 234, 0.5), transparent);
+  animation: dna-scan 3s infinite;
+}
+
+@keyframes dna-scan {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+.dna-soul-panel:hover {
+  border-color: rgba(147, 51, 234, 0.5);
+  box-shadow: 0 0 30px rgba(147, 51, 234, 0.2);
+  transform: translateY(-2px);
+  transition: all 0.3s ease;
+}
+
+.dna-data-field {
+  position: relative;
+  transition: all 0.3s ease;
+}
+
+.dna-data-field:hover {
+  transform: translateX(5px);
+}
+
+.dna-data-field::before {
+  content: '';
+  position: absolute;
+  left: -10px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 3px;
+  height: 0;
+  background: linear-gradient(180deg, rgba(147, 51, 234, 0.8) 0%, rgba(59, 130, 246, 0.8) 100%);
+  transition: height 0.3s ease;
+}
+
+.dna-data-field:hover::before {
+  height: 100%;
+}
+
+/* DNA Cell Button Styles - Realistic Biological Design */
+.dna-cell-button {
+  position: relative;
+  background: linear-gradient(135deg, rgba(20, 30, 50, 0.95) 0%, rgba(30, 45, 70, 0.95) 100%);
+  border: 2px solid rgba(100, 200, 255, 0.3);
+  border-radius: 20px;
+  overflow: hidden;
+  backdrop-filter: blur(15px);
+  transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: pointer;
+  z-index: 1;
+  box-shadow: 
+    0 8px 32px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  min-height: 50px;
+  padding: 12px 20px;
+}
+
+.dna-cell-button::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(100, 200, 255, 0.1), transparent);
+  transition: left 0.8s ease;
+  z-index: -1;
+}
+
+.dna-cell-button:hover::before {
+  left: 100%;
+}
+
+.dna-cell-button:hover {
+  transform: translateY(-4px) scale(1.03);
+  border-color: rgba(100, 200, 255, 0.6);
+  box-shadow: 
+    0 15px 40px rgba(0, 0, 0, 0.4),
+    0 0 30px rgba(100, 200, 255, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+
+.dna-view-cell {
+  background: linear-gradient(135deg, rgba(30, 60, 120, 0.95) 0%, rgba(50, 100, 200, 0.95) 100%);
+  border-color: rgba(100, 150, 255, 0.4);
+}
+
+.dna-view-cell:hover {
+  border-color: rgba(100, 150, 255, 0.7);
+  box-shadow: 
+    0 15px 40px rgba(0, 0, 0, 0.4),
+    0 0 35px rgba(100, 150, 255, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+
+.dna-share-cell {
+  background: linear-gradient(135deg, rgba(20, 80, 100, 0.95) 0%, rgba(40, 160, 200, 0.95) 100%);
+  border-color: rgba(100, 200, 200, 0.4);
+}
+
+.dna-share-cell:hover {
+  border-color: rgba(100, 200, 200, 0.7);
+  box-shadow: 
+    0 15px 40px rgba(0, 0, 0, 0.4),
+    0 0 35px rgba(100, 200, 200, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+
+/* DNA Cell Container */
+.dna-cell-container {
+  position: relative;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Real Icons */
+.dna-real-icon {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 10;
+  opacity: 0.9;
+  transition: all 0.3s ease;
+}
+
+.dna-icon {
+  font-size: 18px;
+  color: rgba(100, 200, 255, 0.9);
+  text-shadow: 0 0 8px rgba(100, 200, 255, 0.6);
+  animation: icon-pulse 2s ease-in-out infinite;
+}
+
+.qr-icon {
+  font-size: 16px;
+  color: rgba(100, 200, 200, 0.9);
+  text-shadow: 0 0 8px rgba(100, 200, 200, 0.6);
+  animation: icon-pulse 2s ease-in-out infinite;
+}
+
+.dna-cell-button:hover .dna-real-icon {
+  opacity: 1;
+  transform: translate(-50%, -50%) scale(1.1);
+}
+
+.dna-cell-button:hover .dna-icon {
+  color: rgba(100, 200, 255, 1);
+  text-shadow: 0 0 12px rgba(100, 200, 255, 0.8);
+}
+
+.dna-cell-button:hover .qr-icon {
+  color: rgba(100, 200, 200, 1);
+  text-shadow: 0 0 12px rgba(100, 200, 200, 0.8);
+}
+
+/* Cell Membrane - Outer boundary */
+.dna-cell-membrane {
+  position: relative;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 30% 30%, rgba(100, 200, 255, 0.3) 0%, rgba(50, 100, 200, 0.1) 100%);
+  border: 2px solid rgba(100, 200, 255, 0.4);
+  animation: cell-membrane-pulse 3s ease-in-out infinite;
+  overflow: hidden;
+}
+
+.dna-cell-membrane::before {
+  content: '';
+  position: absolute;
+  top: -1px;
+  left: -1px;
+  right: -1px;
+  bottom: -1px;
+  border-radius: 50%;
+  background: conic-gradient(from 0deg, transparent, rgba(100, 200, 255, 0.2), transparent);
+  animation: membrane-rotation 8s linear infinite;
+  z-index: -1;
+}
+
+/* Cell Nucleus */
+.dna-nucleus {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 40% 40%, rgba(150, 100, 255, 0.8) 0%, rgba(100, 50, 200, 0.6) 100%);
+  border: 1px solid rgba(150, 100, 255, 0.6);
+  animation: nucleus-pulse 2.5s ease-in-out infinite;
+}
+
+/* Chromatin (DNA strands) */
+.dna-chromatin {
+  position: absolute;
+  width: 8px;
+  height: 1px;
+  background: linear-gradient(90deg, rgba(255, 200, 100, 0.8) 0%, rgba(255, 150, 50, 0.6) 100%);
+  border-radius: 1px;
+  animation: chromatin-movement 4s ease-in-out infinite;
+}
+
+.dna-chromatin:nth-child(1) {
+  top: 3px;
+  left: 2px;
+  transform: rotate(15deg);
+  animation-delay: 0s;
+}
+
+.dna-chromatin:nth-child(2) {
+  top: 6px;
+  left: 2px;
+  transform: rotate(-20deg);
+  animation-delay: 1.3s;
+}
+
+.dna-chromatin:nth-child(3) {
+  top: 8px;
+  left: 2px;
+  transform: rotate(10deg);
+  animation-delay: 2.6s;
+}
+
+/* Ribosomes */
+.dna-ribosome {
+  position: absolute;
+  width: 3px;
+  height: 3px;
+  background: radial-gradient(circle, rgba(100, 255, 150, 0.8) 0%, rgba(50, 200, 100, 0.6) 100%);
+  border-radius: 50%;
+  animation: ribosome-float 5s ease-in-out infinite;
+}
+
+.dna-ribosome:nth-child(4) {
+  top: 8px;
+  left: 4px;
+  animation-delay: 0s;
+}
+
+.dna-ribosome:nth-child(5) {
+  top: 20px;
+  left: 18px;
+  animation-delay: 2.5s;
+}
+
+/* Mitochondria */
+.dna-mitochondria {
+  position: absolute;
+  top: 15px;
+  left: 6px;
+  width: 6px;
+  height: 4px;
+  background: linear-gradient(45deg, rgba(255, 200, 100, 0.7) 0%, rgba(255, 150, 50, 0.5) 100%);
+  border-radius: 50% 20% 50% 20%;
+  animation: mitochondria-respiration 3s ease-in-out infinite;
+}
+
+.dna-mitochondria::before {
+  content: '';
+  position: absolute;
+  top: 1px;
+  left: 1px;
+  right: 1px;
+  bottom: 1px;
+  background: linear-gradient(45deg, rgba(255, 200, 100, 0.3) 0%, rgba(255, 150, 50, 0.2) 100%);
+  border-radius: 50% 20% 50% 20%;
+}
+
+/* Protein Particles */
+.dna-protein-particle {
+  position: absolute;
+  width: 2px;
+  height: 2px;
+  background: radial-gradient(circle, rgba(255, 100, 200, 0.8) 0%, rgba(200, 50, 150, 0.6) 100%);
+  border-radius: 50%;
+  animation: protein-synthesis 6s ease-in-out infinite;
+}
+
+.dna-protein-particle:nth-child(7) {
+  top: 12px;
+  left: 20px;
+  animation-delay: 0s;
+}
+
+.dna-protein-particle:nth-child(8) {
+  top: 22px;
+  left: 8px;
+  animation-delay: 3s;
+}
+
+/* Cell Text */
+.dna-cell-text {
+  position: relative;
+  font-weight: 600;
+  letter-spacing: 0.8px;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.6);
+  transition: all 0.4s ease;
+  font-size: 0.9rem;
+}
+
+/* Cell Glow Effect */
+.dna-cell-glow {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  border-radius: 20px;
+  opacity: 0;
+  transition: opacity 0.6s ease;
+  pointer-events: none;
+}
+
+.dna-view-cell .dna-cell-glow {
+  background: radial-gradient(circle at center, rgba(100, 150, 255, 0.3) 0%, transparent 70%);
+}
+
+.dna-share-cell .dna-cell-glow {
+  background: radial-gradient(circle at center, rgba(100, 200, 200, 0.3) 0%, transparent 70%);
+}
+
+.dna-cell-button:hover .dna-cell-glow {
+  opacity: 1;
+}
+
+/* Floating Particles */
+.dna-cell-particles {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+  overflow: hidden;
+  border-radius: 20px;
+}
+
+.dna-cell-particles::before,
+.dna-cell-particles::after {
+  content: '';
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  background: rgba(100, 200, 255, 0.6);
+  border-radius: 50%;
+  animation: particle-float 8s ease-in-out infinite;
+}
+
+.dna-cell-particles::before {
+  top: 20%;
+  left: 10%;
+  animation-delay: 0s;
+}
+
+.dna-cell-particles::after {
+  top: 70%;
+  left: 80%;
+  animation-delay: 4s;
+}
+
+.dna-cell-active {
+  animation: cell-activation 0.8s ease-out;
+}
+
+/* Biological Animations */
+@keyframes cell-membrane-pulse {
+  0%, 100% {
+    transform: scale(1);
+    border-color: rgba(100, 200, 255, 0.4);
+  }
+  50% {
+    transform: scale(1.05);
+    border-color: rgba(100, 200, 255, 0.7);
+  }
+}
+
+@keyframes membrane-rotation {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes nucleus-pulse {
+  0%, 100% {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 0.8;
+  }
+  50% {
+    transform: translate(-50%, -50%) scale(1.1);
+    opacity: 1;
+  }
+}
+
+@keyframes chromatin-movement {
+  0%, 100% {
+    transform: rotate(var(--rotation, 0deg)) translateX(0px);
+    opacity: 0.7;
+  }
+  50% {
+    transform: rotate(var(--rotation, 0deg)) translateX(1px);
+    opacity: 1;
+  }
+}
+
+@keyframes ribosome-float {
+  0%, 100% {
+    transform: translateY(0px) translateX(0px);
+    opacity: 0.8;
+  }
+  25% {
+    transform: translateY(-1px) translateX(0.5px);
+    opacity: 1;
+  }
+  50% {
+    transform: translateY(0px) translateX(1px);
+    opacity: 0.9;
+  }
+  75% {
+    transform: translateY(1px) translateX(0.5px);
+    opacity: 1;
+  }
+}
+
+@keyframes mitochondria-respiration {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 0.7;
+  }
+  50% {
+    transform: scale(1.1);
+    opacity: 1;
+  }
+}
+
+@keyframes protein-synthesis {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 0.6;
+  }
+  50% {
+    transform: scale(1.2);
+    opacity: 1;
+  }
+}
+
+@keyframes particle-float {
+  0%, 100% {
+    transform: translateY(0px) translateX(0px);
+    opacity: 0;
+  }
+  25% {
+    opacity: 0.8;
+  }
+  50% {
+    transform: translateY(-10px) translateX(5px);
+    opacity: 1;
+  }
+  75% {
+    opacity: 0.8;
+  }
+}
+
+@keyframes cell-activation {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.08);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes icon-pulse {
+  0%, 100% {
+    opacity: 0.8;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.05);
+  }
+}
+
+/* DNA Modal Styles */
+.dna-modal-container {
+  position: relative;
+  overflow: hidden;
+  animation: modal-appear 0.3s ease-out;
+  box-shadow: 
+    0 25px 50px rgba(0, 0, 0, 0.5),
+    0 0 100px rgba(147, 51, 234, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+@keyframes modal-appear {
+  0% {
+    opacity: 0;
+    transform: scale(0.95) translateY(-10px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.dna-modal-container::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, rgba(147, 51, 234, 0.5), transparent);
+  animation: dna-modal-scan 3s infinite;
+}
+
+@keyframes dna-modal-scan {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+.dna-modal-icon {
+  position: relative;
+  display: inline-block;
+}
+
+.dna-modal-icon::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(147, 51, 234, 0.2) 0%, transparent 70%);
+  animation: icon-glow 2s ease-in-out infinite;
+}
+
+@keyframes icon-glow {
+  0%, 100% {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 0.5;
+  }
+  50% {
+    transform: translate(-50%, -50%) scale(1.2);
+    opacity: 1;
+  }
+}
+
+/* DNA Cell Overlay */
+.dna-cell-overlay {
+  z-index: 10;
+}
+
+.dna-cell-membrane-small {
+  position: relative;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 30% 30%, rgba(100, 200, 255, 0.4) 0%, rgba(50, 100, 200, 0.2) 100%);
+  border: 1px solid rgba(100, 200, 255, 0.6);
+  animation: cell-membrane-pulse 2s ease-in-out infinite;
+}
+
+.dna-nucleus-small {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 40% 40%, rgba(150, 100, 255, 0.8) 0%, rgba(100, 50, 200, 0.6) 100%);
+  border: 1px solid rgba(150, 100, 255, 0.6);
+  animation: nucleus-pulse 1.5s ease-in-out infinite;
+}
+
+.dna-chromatin-small {
+  position: absolute;
+  width: 4px;
+  height: 1px;
+  background: linear-gradient(90deg, rgba(255, 200, 100, 0.8) 0%, rgba(255, 150, 50, 0.6) 100%);
+  border-radius: 1px;
+  animation: chromatin-movement 2s ease-in-out infinite;
+}
+
+.dna-chromatin-small:nth-child(1) {
+  top: 2px;
+  left: 2px;
+  transform: rotate(15deg);
+  animation-delay: 0s;
+}
+
+.dna-chromatin-small:nth-child(2) {
+  top: 4px;
+  left: 2px;
+  transform: rotate(-20deg);
+  animation-delay: 1s;
+}
+
+
+/* DNA Data Sections */
+.dna-data-section {
+  position: relative;
+  transition: all 0.3s ease;
+}
+
+.dna-data-section:hover {
+  transform: translateX(5px);
+}
+
+.dna-data-section::before {
+  content: '';
+  position: absolute;
+  left: -10px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 3px;
+  height: 0;
+  background: linear-gradient(180deg, rgba(147, 51, 234, 0.8) 0%, rgba(59, 130, 246, 0.8) 100%);
+  transition: height 0.3s ease;
+}
+
+.dna-data-section:hover::before {
+  height: 100%;
+}
+
+.dna-field-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+/* DNA Action Buttons */
+.dna-action-button {
+  position: relative;
+  border-radius: 12px;
+  font-weight: 600;
+  font-size: 0.875rem;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow: hidden;
+  backdrop-filter: blur(10px);
+}
+
+.dna-action-button::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+  transition: left 0.5s ease;
+}
+
+.dna-action-button:hover::before {
+  left: 100%;
+}
+
+.dna-qr-button {
+  background: linear-gradient(135deg, rgba(20, 184, 166, 0.9) 0%, rgba(34, 197, 94, 0.9) 100%);
+  border: 1px solid rgba(20, 184, 166, 0.4);
+  color: white;
+}
+
+.dna-qr-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(20, 184, 166, 0.4);
+  border-color: rgba(20, 184, 166, 0.7);
+}
+
+.dna-download-button {
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.9) 0%, rgba(37, 99, 235, 0.9) 100%);
+  border: 1px solid rgba(59, 130, 246, 0.4);
+  color: white;
+}
+
+.dna-download-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(59, 130, 246, 0.4);
+  border-color: rgba(59, 130, 246, 0.7);
+}
+
+.dna-close-button {
+  background: linear-gradient(135deg, rgba(107, 114, 128, 0.9) 0%, rgba(75, 85, 99, 0.9) 100%);
+  border: 1px solid rgba(107, 114, 128, 0.4);
+  color: white;
+}
+
+.dna-close-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(107, 114, 128, 0.4);
+  border-color: rgba(107, 114, 128, 0.7);
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .animate-quantum-float {
+    animation-duration: 6s;
+  }
+  
+  .animate-dna-spiral {
+    animation-duration: 12s;
+  }
+  
+  .animate-soul-pulse {
+    animation-duration: 3s;
+  }
+  
+  .dna-cell-button {
+    padding: 10px 14px;
+    font-size: 0.7rem;
+  }
+  
+  .dna-cell-container {
+    width: 24px;
+    height: 24px;
+  }
+  
+  .dna-cell-membrane {
+    width: 20px;
+    height: 20px;
+  }
+  
+  .dna-nucleus {
+    width: 8px;
+    height: 8px;
+  }
+  
+  .dna-chromatin {
+    width: 6px;
+    height: 1px;
+  }
+  
+  .dna-ribosome {
+    width: 2px;
+    height: 2px;
+  }
+  
+  .dna-mitochondria {
+    width: 4px;
+    height: 3px;
+  }
+  
+  .dna-protein-particle {
+    width: 1px;
+    height: 1px;
+  }
+  
+  .dna-cell-text {
+    font-size: 0.65rem;
+    letter-spacing: 0.5px;
+  }
+  
+  .dna-icon {
+    font-size: 10px;
+  }
+  
+  .qr-icon {
+    font-size: 9px;
+  }
+}
