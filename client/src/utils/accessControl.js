@@ -188,14 +188,44 @@ export const validateCertificateAccess = async (certificateId, certificate, user
  * @param {number} expiryHours - Token expiry in hours (default: 24)
  * @returns {string} Secure URL with access token
  */
-export const generateQRCodeURL = (certificateId, studentAddress, baseUrl = window.location.origin, expiryHours = 24) => {
+export const generateQRCodeURL = (certificateId, studentAddress, baseUrl = null, expiryHours = 24) => {
   try {
+    // Validate inputs
+    if (!certificateId || !studentAddress) {
+      throw new Error('Certificate ID and student address are required');
+    }
+
+    // Get base URL with fallbacks for different environments
+    let finalBaseUrl = baseUrl;
+    if (!finalBaseUrl) {
+      if (typeof window !== 'undefined' && window.location) {
+        finalBaseUrl = window.location.origin;
+      } else if (typeof process !== 'undefined' && process.env) {
+        // Server-side fallback
+        finalBaseUrl = process.env.VITE_APP_URL || process.env.REACT_APP_URL || 'https://your-app.vercel.app';
+      } else {
+        throw new Error('Unable to determine base URL');
+      }
+    }
+
+    // Ensure base URL doesn't end with slash
+    finalBaseUrl = finalBaseUrl.replace(/\/$/, '');
+
     const accessToken = generateCertificateAccessToken(certificateId, studentAddress, expiryHours);
     if (!accessToken) {
       throw new Error('Failed to generate access token');
     }
     
-    return `${baseUrl}/certificate/${certificateId}?access_token=${accessToken}`;
+    const qrUrl = `${finalBaseUrl}/certificate/${certificateId}?access_token=${accessToken}`;
+    
+    // Validate the generated URL
+    try {
+      new URL(qrUrl);
+    } catch (urlError) {
+      throw new Error(`Generated invalid URL: ${qrUrl}`);
+    }
+    
+    return qrUrl;
   } catch (error) {
     console.error('Error generating QR code URL:', error);
     return null;

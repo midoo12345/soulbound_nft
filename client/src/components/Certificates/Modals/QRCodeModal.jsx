@@ -49,6 +49,15 @@ const QRCodeModal = ({ showQRModal, certificate, closeQRModal, userWallet }) => 
     try {
       setLoading(true);
       
+      // Validate inputs before generating URL
+      if (!certificate || !certificate.id || !certificate.student) {
+        throw new Error('Certificate data is incomplete');
+      }
+      
+      if (!userWallet) {
+        throw new Error('User wallet is required to generate QR code');
+      }
+      
       // Generate secure URL with access token using selected duration
       const url = generateQRCodeURL(certificate.id, certificate.student, window.location.origin, selectedDuration);
       if (!url) {
@@ -72,7 +81,7 @@ const QRCodeModal = ({ showQRModal, certificate, closeQRModal, userWallet }) => 
       setQrDataURL(qrDataURL);
     } catch (error) {
       console.error('Error generating QR code:', error);
-      alert('Failed to generate QR code. Please try again.');
+      alert(`Failed to generate QR code: ${error.message}`);
     } finally {
       setLoading(false);
     }
@@ -188,6 +197,18 @@ const QRCodeModal = ({ showQRModal, certificate, closeQRModal, userWallet }) => 
           {secureUrl && (
             <div className="text-xs text-gray-400 mb-4 break-all p-2 bg-gray-900 rounded max-h-20 overflow-y-auto">
               <span className="font-medium">Secure URL:</span> {secureUrl}
+            </div>
+          )}
+          
+          {/* Debug information for production troubleshooting */}
+          {process.env.NODE_ENV === 'production' && (
+            <div className="bg-gray-900 border border-gray-600 text-gray-300 px-3 py-2 rounded mb-4 text-xs">
+              <p className="font-medium mb-1">🔧 Debug Info:</p>
+              <p>Origin: {window.location.origin}</p>
+              <p>Certificate ID: {certificate?.id}</p>
+              <p>Student: {certificate?.student?.substring(0, 10)}...</p>
+              <p>Duration: {selectedDuration}h</p>
+              <p>Generated: {generatedAt?.toISOString()}</p>
             </div>
           )}
           
