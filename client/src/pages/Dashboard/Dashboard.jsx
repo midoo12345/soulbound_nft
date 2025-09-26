@@ -57,6 +57,12 @@ const Dashboard = () => {
 
   // Dashboard-specific loading state
   const [isLoading, setIsLoading] = useState(true);
+  // Fallback: institution count derived like InstitutionAnalytics (issuers + zero-cert institutions)
+  const [derivedInstitutionCount, setDerivedInstitutionCount] = useState(0);
+  const displayInstitutionCount = useMemo(() => {
+    const hookCount = institutionStats?.totalInstitutions || 0;
+    return hookCount > 0 ? hookCount : (derivedInstitutionCount || 0);
+  }, [institutionStats?.totalInstitutions, derivedInstitutionCount]);
   
   // Enhanced error state management
   const [hasRenderError, setHasRenderError] = useState(false);
@@ -129,6 +135,7 @@ const Dashboard = () => {
           // Refresh stats every 3 blocks for faster real-time updates
           if (blockNumber % 3 === 0) {
             refreshStats();
+            refreshDerivedInstitutionCount();
           }
         });
       }
@@ -146,6 +153,44 @@ const Dashboard = () => {
       }
     };
   }, [contract, provider, handleCertificateEvent, refreshStats]);
+
+  // Same logic as InstitutionAnalytics to compute institution count
+  const refreshDerivedInstitutionCount = useCallback(async () => {
+    if (!contract) return;
+    try {
+      const [verifiedIds, pendingIds, revokedIds] = await Promise.all([
+        contract.getVerifiedCertificateIds(0, 1000).catch(() => []),
+        contract.getPendingCertificateIds(0, 1000).catch(() => []),
+        contract.getRevokedCertificateIds(0, 1000).catch(() => [])
+      ]);
+      const uniqueIds = Array.from(new Set([...(verifiedIds || []), ...(pendingIds || []), ...(revokedIds || [])]));
+      const issuerSet = new Set();
+      // Collect issuers from all certificates
+      const batchSize = 200;
+      for (let i = 0; i < uniqueIds.length; i += batchSize) {
+        const batch = uniqueIds.slice(i, i + batchSize);
+        await Promise.all(batch.map(async (id) => {
+          try {
+            const cert = await contract.getCertificate(id);
+            const issuer = cert?.institution || cert?.institutionAddress;
+            if (issuer) issuerSet.add(issuer.toLowerCase());
+          } catch {}
+        }));
+      }
+      // Include zero-certificate institutions from real-time stats
+      const zeroCert = (institutionStats?.activeInstitutionAddresses || []).map(a => a.toLowerCase());
+      zeroCert.forEach(a => issuerSet.add(a));
+      setDerivedInstitutionCount(issuerSet.size);
+    } catch (e) {
+      // ignore fallback errors
+    }
+  }, [contract, institutionStats?.activeInstitutionAddresses]);
+
+  useEffect(() => {
+    if (contract) {
+      refreshDerivedInstitutionCount();
+    }
+  }, [contract, refreshDerivedInstitutionCount]);
 
   // Wallet initialization is now handled by useWalletRoles hook
   // Initialize dashboard when wallet is ready
@@ -345,7 +390,12 @@ const Dashboard = () => {
 
           {/* Dashboard Stats Section - Refactored Component */}
           <DashboardStats 
-            institutionStats={institutionStats}
+            institutionStats={{
+              ...institutionStats,
+              totalInstitutions: (institutionStats?.totalInstitutions || 0) > 0 
+                ? institutionStats.totalInstitutions 
+                : (derivedInstitutionCount || 0)
+            }}
             isLoading={statsLoading}
             error={statsError}
             userRoles={roles}
@@ -391,13 +441,13 @@ const Dashboard = () => {
                     <div className="flex justify-between mb-1">
                       <span className="text-xs text-gray-400">System Coverage</span>
                       <span className="text-xs font-mono text-blue-300">
-                        {institutionStats?.totalInstitutions || 0} Institutions
+                        {displayInstitutionCount} Institutions
                       </span>
                     </div>
                     <div className="w-full bg-gray-800/80 h-1.5 rounded-full overflow-hidden">
                       <div 
                         className="bg-gradient-to-r from-blue-600 to-indigo-500 h-full rounded-full"
-                        style={{ width: `${Math.min(100, ((institutionStats?.totalInstitutions || 0) / Math.max(1, 10)) * 100)}%` }}
+                        style={{ width: `${Math.min(100, ((displayInstitutionCount || 0) / Math.max(1, 10)) * 100)}%` }}
                       ></div>
                     </div>
                   </div>
@@ -606,7 +656,7 @@ const Dashboard = () => {
                         <span className="text-xs text-gray-400">Active Institutions</span>
                         <span className="w-2 h-2 bg-green-400 rounded-full"></span>
                       </div>
-                      <div className="text-xl font-bold text-white">{institutionStats?.totalInstitutions || 0}</div>
+                      <div className="text-xl font-bold text-white">{displayInstitutionCount}</div>
                       <div className="text-xs text-violet-400 mt-1">Authorized to issue</div>
                     </div>
                     
@@ -616,8 +666,8 @@ const Dashboard = () => {
                         <span className="w-2 h-2 bg-green-400 rounded-full"></span>
                       </div>
                       <div className="text-xl font-bold text-white">
-                        {(institutionStats?.totalInstitutions || 0) > 0 
-                          ? Math.floor((institutionStats?.totalCertificates || 0) / (institutionStats?.totalInstitutions || 1)) 
+                        {displayInstitutionCount > 0 
+                          ? Math.floor((institutionStats?.totalCertificates || 0) / displayInstitutionCount) 
                           : 0}
                       </div>
                       <div className="text-xs text-violet-400 mt-1">Certificates issued</div>
@@ -632,8 +682,8 @@ const Dashboard = () => {
                     </div>
                     <div className="w-full h-10 bg-gray-800/40 rounded overflow-hidden relative">
                       <div className="absolute inset-0 flex items-end">
-                        {(institutionStats?.totalInstitutions || 0) > 0 ? (
-                          [...Array(Math.min(institutionStats?.totalInstitutions || 0, 10))].map((_, i) => (
+                        {(displayInstitutionCount || 0) > 0 ? (
+                          [...Array(Math.min(displayInstitutionCount || 0, 10))].map((_, i) => (
                             <div 
                               key={i} 
                               className="flex-1 mx-px bg-violet-500/40"

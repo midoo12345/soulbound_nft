@@ -7,6 +7,15 @@ import { fetchMetadataFromIPFS, getImageUrlFromMetadata, placeholderImage } from
 import { processCertificatesBatch } from "../sperates/cert_utilits.js";
 import FuturisticSpinner from "../ui/FuturisticSpinner";
 
+// Prefer env-defined RPC, then browser-friendly Sepolia RPC fallbacks (avoid endpoints that block CORS)
+const ENV_RPC = import.meta?.env?.VITE_RPC_URL;
+const RPC_URLS = [
+  ENV_RPC,
+  'https://ethereum-sepolia.publicnode.com',
+  'https://sepolia.infura.io/v3/9aa3d95b3bc440fa88ea12eaa4456161',
+  'https://eth-sepolia.g.alchemy.com/v2/demo'
+].filter(Boolean);
+
 export default function Certificates() {
   const [currentCertificate, setCurrentCertificate] = useState(null);
   const [certificates, setCertificates] = useState([]);
@@ -30,8 +39,19 @@ export default function Certificates() {
           console.log('MetaMask detected, connecting to blockchain...');
           provider = new BrowserProvider(window.ethereum);
         } else {
-          console.log('No MetaMask detected, using public RPC provider for read-only access');
-          provider = new JsonRpcProvider('https://rpc.sepolia.org');
+          console.log('No MetaMask detected, trying public RPC providers for read-only access');
+          for (const rpcUrl of RPC_URLS) {
+            try {
+              const rpcProvider = new JsonRpcProvider(rpcUrl);
+              await rpcProvider.getNetwork();
+              provider = rpcProvider;
+              console.log(`Connected to fallback RPC: ${rpcUrl}`);
+              break;
+            } catch (rpcError) {
+              console.warn(`Failed to connect to RPC ${rpcUrl}:`, rpcError?.message || rpcError);
+            }
+          }
+          if (!provider) throw new Error('Unable to connect to any public RPC');
         }
 
         const contract = new Contract(
@@ -232,15 +252,7 @@ export default function Certificates() {
           </span>
         </h2>
 
-        {/* Debug Info for Mobile */}
-        <div className="mb-4 p-2 bg-gray-800/50 rounded text-xs text-gray-400">
-          <div>Debug Info:</div>
-          <div>Loading: {loading ? 'true' : 'false'}</div>
-          <div>Certificates count: {certificates.length}</div>
-          <div>Current certificate: {currentCertificate ? 'exists' : 'null'}</div>
-          <div>User Agent: {navigator.userAgent.includes('Mobile') ? 'Mobile' : 'Desktop'}</div>
-          <div>Window width: {typeof window !== 'undefined' ? window.innerWidth : 'N/A'}</div>
-        </div>
+        {/* Removed debug info block for production */}
 
         {loading ? (
           <div className="flex flex-col items-center justify-center py-12 sm:py-16 lg:py-20">
