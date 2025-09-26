@@ -9,7 +9,10 @@ import contractABI from '../config/abi.json';
  */
 const useInstitutionStats = (contract, roleConstants, currentAccount) => {
   const [stats, setStats] = useState({
+    // Backwards-compatible: totalInstitutions maps to active (authorized, non-admin)
     totalInstitutions: 0,
+    totalInstitutionsActive: 0,
+    totalInstitutionsAll: 0,
     totalCertificates: 0,
     verifiedCertificates: 0,
     pendingCertificates: 0,    // 🔥 DIRECT pending count
@@ -83,6 +86,54 @@ const useInstitutionStats = (contract, roleConstants, currentAccount) => {
     }
   }, [contract, roleConstants]);
 
+  // Get ALL current institution role holders (regardless of authorization), optionally excluding admins
+  const getAllInstitutionRoleHolders = useCallback(async (excludeAdmins = false) => {
+    if (!contract || !roleConstants?.INSTITUTION_ROLE) {
+      return [];
+    }
+    try {
+      const grantFilter = contract.filters.RoleGranted(roleConstants.INSTITUTION_ROLE);
+      const revokeFilter = contract.filters.RoleRevoked(roleConstants.INSTITUTION_ROLE);
+      const [grantEvents, revokeEvents] = await Promise.all([
+        contract.queryFilter(grantFilter, 0, "latest"),
+        contract.queryFilter(revokeFilter, 0, "latest")
+      ]);
+
+      const institutionsSet = new Set();
+      grantEvents.forEach(event => {
+        if (event.args?.account) {
+          institutionsSet.add(event.args.account.toLowerCase());
+        }
+      });
+      revokeEvents.forEach(event => {
+        if (event.args?.account) {
+          institutionsSet.delete(event.args.account.toLowerCase());
+        }
+      });
+
+      const holders = [];
+      const DEFAULT_ADMIN_ROLE = roleConstants.DEFAULT_ADMIN_ROLE || ethers.ZeroHash;
+      const checks = Array.from(institutionsSet).map(async (address) => {
+        try {
+          const stillHasRole = await contract.hasRole(roleConstants.INSTITUTION_ROLE, address);
+          if (!stillHasRole) return;
+          if (excludeAdmins) {
+            const isAdmin = await contract.hasRole(DEFAULT_ADMIN_ROLE, address);
+            if (isAdmin) return;
+          }
+          holders.push(address);
+        } catch (e) {
+          // ignore individual address failures
+        }
+      });
+      await Promise.all(checks);
+      return holders;
+    } catch (error) {
+      console.error('Error fetching institution role holders:', error);
+      return [];
+    }
+  }, [contract, roleConstants]);
+
   // Fetch all institution statistics
   const fetchInstitutionStats = useCallback(async () => {
     if (!contract) {
@@ -120,6 +171,7 @@ const useInstitutionStats = (contract, roleConstants, currentAccount) => {
         revokedCountBN,
         pendingCountBN,
         activeInstitutionAddresses,
+        allRoleHoldersNonAdmin,
         currentInstitutionCount
       ] = await Promise.all([
         // Total certificates (global, uncapped)
@@ -132,6 +184,8 @@ const useInstitutionStats = (contract, roleConstants, currentAccount) => {
         contract.countCertificatesByStatus(false, false),
         // Active institution addresses
         getActiveInstitutionAddresses(),
+        // All role holders excluding admins (may include unauthorized)
+        getAllInstitutionRoleHolders(true),
         // Certificates issued by current institution (if applicable)
         currentAccount ? 
           contract.countCertificatesByInstitution(currentAccount).catch(() => 0) : 
@@ -202,12 +256,15 @@ const useInstitutionStats = (contract, roleConstants, currentAccount) => {
         verifiedCount: verifiedCount,
         pendingCount: pendingCount,
         revokedCount: revokedCount,
-        institutionCount: activeInstitutionAddresses.length,
+        institutionCountActive: activeInstitutionAddresses.length,
+        institutionCountAll: allRoleHoldersNonAdmin.length,
         currentInstitutionCount: currentInstitutionCount.toString()
       });
 
       const newStats = {
         totalInstitutions: activeInstitutionAddresses.length,
+        totalInstitutionsActive: activeInstitutionAddresses.length,
+        totalInstitutionsAll: allRoleHoldersNonAdmin.length,
         totalCertificates: Number(totalSupply.toString()),
         verifiedCertificates: verifiedCount,
         pendingCertificates: pendingCount,  // 🔥 DIRECT pending count
@@ -239,7 +296,7 @@ const useInstitutionStats = (contract, roleConstants, currentAccount) => {
     if (contract && roleConstants?.INSTITUTION_ROLE) {
       fetchInstitutionStats();
       
-      // NEW: Smart event listener - only updates when blockchain events actually happen!
+      // NEW: Smart event listener - updates when blockchain events actually happen!
       const setupEventListeners = async () => {
         try {
           const { BrowserProvider } = await import('ethers');
@@ -258,13 +315,33 @@ const useInstitutionStats = (contract, roleConstants, currentAccount) => {
             );
 
             // Check for new events in this block
-            const [issuedEvents, verifiedEvents, revokedEvents] = await Promise.all([
+            const [
+              issuedEvents,
+              verifiedEvents,
+              revokedEvents,
+              roleGrantedEvents,
+              roleRevokedEvents,
+              institutionAuthorizedEvents,
+              institutionRevokedEvents
+            ] = await Promise.all([
               fullContract.queryFilter(fullContract.filters.CertificateIssued(), blockNumber, blockNumber),
               fullContract.queryFilter(fullContract.filters.CertificateVerified(), blockNumber, blockNumber),
-              fullContract.queryFilter(fullContract.filters.CertificateRevoked(), blockNumber, blockNumber)
+              fullContract.queryFilter(fullContract.filters.CertificateRevoked(), blockNumber, blockNumber),
+              fullContract.queryFilter(fullContract.filters.RoleGranted(roleConstants.INSTITUTION_ROLE), blockNumber, blockNumber),
+              fullContract.queryFilter(fullContract.filters.RoleRevoked(roleConstants.INSTITUTION_ROLE), blockNumber, blockNumber),
+              fullContract.queryFilter(fullContract.filters.InstitutionAuthorized(), blockNumber, blockNumber),
+              fullContract.queryFilter(fullContract.filters.InstitutionRevoked(), blockNumber, blockNumber)
             ]);
 
-            const hasNewEvents = issuedEvents.length > 0 || verifiedEvents.length > 0 || revokedEvents.length > 0;
+            const hasNewEvents = (
+              issuedEvents.length > 0 ||
+              verifiedEvents.length > 0 ||
+              revokedEvents.length > 0 ||
+              roleGrantedEvents.length > 0 ||
+              roleRevokedEvents.length > 0 ||
+              institutionAuthorizedEvents.length > 0 ||
+              institutionRevokedEvents.length > 0
+            );
             
             if (hasNewEvents) {
               console.log('useInstitutionStats: New events detected! Auto-updating stats...');

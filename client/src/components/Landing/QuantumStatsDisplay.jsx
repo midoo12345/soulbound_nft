@@ -56,7 +56,8 @@ const AcademicStatsDisplay = ({ isMobile }) => {
     // Use real data instead of fake stats - use institutionStats for accurate institution count
     const realStats = {
         certificates: totalCertificates || 0,
-        institutions: roleConstants?.INSTITUTION_ROLE ? (institutionStats.totalInstitutions || 0) : 1, // Fallback to 1 if roleConstants not ready
+        // Prefer active authorized non-admin if present; if mismatch exists, prefer the explicit active count
+        institutions: (institutionStats.totalInstitutionsActive ?? institutionStats.totalInstitutions) || 0,
         verification: realVerificationRate || 0
     };
 
