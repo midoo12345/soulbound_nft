@@ -1,7 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import PropTypes from 'prop-types';
-import contractAddress from '../../../config/contractAddress.json';
-import contractABI from '../../../config/abi.json';
 
 /**
  * Certificate Analytics Component
@@ -43,13 +41,13 @@ const CertificateAnalytics = ({
       .join(' ');
   };
 
-  // Fetch real certificate data from contract (optimized, batched)
+  // Fetch real certificate data from contract (optimized, direct calls only)
   const fetchCertificateData = useCallback(async () => {
     if (!contract) return;
     setIsLoadingData(true);
     try {
       // 1) Recent certificates (fast): use contract-provided recent list
-      const recentLimit = 200; // tuneable
+      const recentLimit = 100; // smaller limit for faster loads; adjust as needed
       const recentIds = await contract.getRecentCertificates(recentLimit);
       // Ethers v6 may return a read-only Result array; clone to a mutable plain array before reuse
       const recentIdsArray = Array.from(recentIds);
@@ -117,13 +115,21 @@ const CertificateAnalytics = ({
         else gradeDistribution['Below 60']++;
       });
 
-      // 6) Course totals across contract (accurate, O(numCourses)) for recent-sample courses
-      const allCourses = {};
-      let sumSelectedCourseCounts = 0;
-      for (const cid of uniqueCourseIds) {
-        try {
-          const c = await contract.countCertificatesByCourse(cid);
-          const count = Number(c);
+      // 6) Course totals across contract (accurate) — only compute when needed
+      let allCourses = {};
+      if (selectedMetric === 'courses') {
+        // Fetch counts concurrently for speed
+        const counts = await Promise.all(uniqueCourseIds.map(async (cid) => {
+          try {
+            const c = await contract.countCertificatesByCourse(cid);
+            return Number(c);
+          } catch (_) {
+            return 0;
+          }
+        }));
+        let sumSelectedCourseCounts = 0;
+        uniqueCourseIds.forEach((cid, idx) => {
+          const count = counts[idx] || 0;
           sumSelectedCourseCounts += count;
           const name = courseNames[cid] || `Course ${cid}`;
           allCourses[name] = {
@@ -132,17 +138,14 @@ const CertificateAnalytics = ({
             certificateCount: count,
             percentage: count
           };
-        } catch (err) {
-          // Ignore missing course
-        }
-      }
-      // Convert counts to percentages over the selected course set
-      if (sumSelectedCourseCounts > 0) {
-        Object.keys(allCourses).forEach(k => {
-          allCourses[k].percentage = Math.round((allCourses[k].certificateCount / sumSelectedCourseCounts) * 100);
         });
-      } else {
-        Object.keys(allCourses).forEach(k => { allCourses[k].percentage = 0; });
+        if (sumSelectedCourseCounts > 0) {
+          Object.keys(allCourses).forEach(k => {
+            allCourses[k].percentage = Math.round((allCourses[k].certificateCount / sumSelectedCourseCounts) * 100);
+          });
+        } else {
+          Object.keys(allCourses).forEach(k => { allCourses[k].percentage = 0; });
+        }
       }
 
       // 7) Course distribution from recent sample (percentages of sample)
@@ -157,97 +160,7 @@ const CertificateAnalytics = ({
         courseDistribution[name] = Math.round((courseDistributionCounts[name] / sampleTotal) * 100);
       });
 
-      // 7b) OPTIONAL: Enumerate ALL courses via CourseNameSet events and override distributions
-      try {
-        const { BrowserProvider, Contract } = await import('ethers');
-        const provider = contract.provider || (window.ethereum ? new BrowserProvider(window.ethereum) : null);
-        if (provider) {
-          const fullContract = new Contract(
-            contractAddress.SoulboundCertificateNFT,
-            contractABI.SoulboundCertificateNFT,
-            provider
-          );
-          const latest = await provider.getBlockNumber();
-          const CHUNK = 50000;
-          const courseIdSet = new Set();
-          for (let from = 0; from <= latest; from += CHUNK) {
-            const to = Math.min(latest, from + CHUNK);
-            const events = await fullContract.queryFilter(fullContract.filters.CourseNameSet(), from, to);
-            for (const ev of events) {
-              const cid = Number(ev.args?.courseId ?? ev.args?.[0]);
-              if (!Number.isNaN(cid)) courseIdSet.add(cid);
-            }
-          }
-          const allIds = Array.from(courseIdSet);
-          if (allIds.length > 0) {
-            // Batch resolve names in chunks
-            const NAME_CHUNK = 200;
-            const idToName = {};
-            for (let i = 0; i < allIds.length; i += NAME_CHUNK) {
-              const slice = allIds.slice(i, i + NAME_CHUNK);
-              try {
-                const names = await fullContract.getCourseNamesBatch(slice);
-                slice.forEach((cid, idx) => {
-                  const nm = names[idx];
-                  idToName[cid] = nm && nm.trim() ? nm : `Course ${cid}`;
-                });
-              } catch (_) {
-                // Fallback to single calls
-                for (const cid of slice) {
-                  try {
-                    const nm = await fullContract.getCourseName(cid);
-                    idToName[cid] = nm && nm.trim() ? nm : `Course ${cid}`;
-                  } catch (_) {
-                    idToName[cid] = `Course ${cid}`;
-                  }
-                }
-              }
-            }
-
-            // Count per course with simple concurrency control
-            const COUNT_BATCH = 50;
-            const nameToData = {};
-            let totalAcrossAllCourses = 0;
-            for (let i = 0; i < allIds.length; i += COUNT_BATCH) {
-              const slice = allIds.slice(i, i + COUNT_BATCH);
-              const counts = await Promise.all(slice.map(async (cid) => {
-                try {
-                  const c = await fullContract.countCertificatesByCourse(cid);
-                  return Number(c);
-                } catch (_) {
-                  return 0;
-                }
-              }));
-              slice.forEach((cid, idx) => {
-                const count = counts[idx] || 0;
-                totalAcrossAllCourses += count;
-                const name = idToName[cid] || `Course ${cid}`;
-                nameToData[name] = { id: cid, name, certificateCount: count };
-              });
-            }
-
-            if (totalAcrossAllCourses > 0) {
-              // Override allCourses and distribution with full set
-              Object.keys(nameToData).forEach(nm => {
-                const row = nameToData[nm];
-                allCourses[nm] = {
-                  id: row.id,
-                  name: row.name,
-                  certificateCount: row.certificateCount,
-                  percentage: Math.round((row.certificateCount / totalAcrossAllCourses) * 100)
-                };
-              });
-              // Replace courseDistribution with full global percentages
-              Object.keys(courseDistribution).forEach(k => { delete courseDistribution[k]; });
-              Object.keys(allCourses).forEach(nm => {
-                courseDistribution[nm] = allCourses[nm].percentage;
-              });
-            }
-          }
-        }
-      } catch (e) {
-        // If event scan fails, keep recent-sample data silently
-      }
+      // 7b) Removed heavy historical event scans to keep it fast
 
       // 8) Verification timeline from recent sample within selected range
       const verificationTimeline = [];
@@ -306,55 +219,24 @@ const CertificateAnalytics = ({
     }
   }, [contract, fetchCertificateData]);
 
-  // Real-time: listen to new blocks and refresh when relevant events appear
+  // Real-time: lightweight listeners on the provided contract instance
   useEffect(() => {
-    if (!contract || typeof window === 'undefined' || !window.ethereum) return;
+    if (!contract || !realTimeEnabled) return;
 
-    let provider;
-    let isActive = true;
-
-    const setup = async () => {
-      try {
-        const { BrowserProvider, Contract } = await import('ethers');
-        provider = new BrowserProvider(window.ethereum);
-
-        provider.on('block', async (blockNumber) => {
-          try {
-            const fullContract = new Contract(
-              contractAddress.SoulboundCertificateNFT,
-              contractABI.SoulboundCertificateNFT,
-              provider
-            );
-
-            const [issuedEvents, verifiedEvents, revokedEvents] = await Promise.all([
-              fullContract.queryFilter(fullContract.filters.CertificateIssued(), blockNumber, blockNumber),
-              fullContract.queryFilter(fullContract.filters.CertificateVerified(), blockNumber, blockNumber),
-              fullContract.queryFilter(fullContract.filters.CertificateRevoked(), blockNumber, blockNumber)
-            ]);
-
-            const hasNew = issuedEvents.length > 0 || verifiedEvents.length > 0 || revokedEvents.length > 0;
-            if (hasNew && isActive) {
-              fetchCertificateData();
-            }
-          } catch (err) {
-            // Silently continue; we'll refresh on next block
-            // console.warn('CertificateAnalytics: block check error', err);
-          }
-        });
-      } catch (err) {
-        // console.warn('CertificateAnalytics: failed to init provider', err);
-      }
+    const handleUpdate = () => {
+      fetchCertificateData();
     };
 
-    setup();
+    contract.on('CertificateIssued', handleUpdate);
+    contract.on('CertificateVerified', handleUpdate);
+    contract.on('CertificateRevoked', handleUpdate);
 
     return () => {
-      isActive = false;
-      if (provider) {
-        provider.removeAllListeners('block');
-      }
+      contract.removeListener('CertificateIssued', handleUpdate);
+      contract.removeListener('CertificateVerified', handleUpdate);
+      contract.removeListener('CertificateRevoked', handleUpdate);
     };
-  }, [contract, fetchCertificateData]);
+  }, [contract, realTimeEnabled, fetchCertificateData]);
 
   // Refresh data when updating
   useEffect(() => {
