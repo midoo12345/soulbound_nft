@@ -68,6 +68,8 @@ const useInstitutionStats = (contract, roleConstants, currentAccount) => {
           const DEFAULT_ADMIN_ROLE = roleConstants.DEFAULT_ADMIN_ROLE || ethers.ZeroHash;
           const isAdmin = await contract.hasRole(DEFAULT_ADMIN_ROLE, address);
           
+          console.log('useInstitutionStats: check address', address, { hasRole, isAuthorized, isAdmin });
+
           // Only include if they have institution role AND authorization AND are not admins
           if (hasRole && isAuthorized && !isAdmin) {
             activeAddresses.push(address);
@@ -78,6 +80,7 @@ const useInstitutionStats = (contract, roleConstants, currentAccount) => {
       });
 
       await Promise.all(verificationPromises);
+      console.log('useInstitutionStats: active institution addresses resolved:', activeAddresses);
       return activeAddresses;
 
     } catch (error) {
