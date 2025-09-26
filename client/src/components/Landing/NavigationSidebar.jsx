@@ -152,55 +152,55 @@ const NavigationSidebar = ({ isMobileMenuOpen, setIsMobileMenuOpen }) => {
 
   const scrollToSection = (sectionId) => {
     const section = document.getElementById(sectionId);
-    if (section) {
-      // Set active section immediately for better UX
-      setActiveSection(sectionId);
+    if (!section) {
+      console.warn(`Section with id "${sectionId}" not found`);
+      return;
+    }
+
+    // Set active section immediately for better UX
+    setActiveSection(sectionId);
+
+    // Set scrolling state to prevent scroll detection interference
+    setIsScrolling(true);
+
+    // Compute target Y with navbar offset using bounding rect (works in nested scroll contexts)
+    const navbarHeight = 80; // Approximate navbar height
+    const targetY = section.getBoundingClientRect().top + window.scrollY - navbarHeight;
+
+    const performScroll = () => {
+      // Use instant scroll for mobile to avoid broken transitions
+      const isMobile = window.innerWidth < 1024;
+      const scrollBehavior = isMobile ? 'auto' : (sectionId === 'team' ? 'auto' : 'smooth');
       
-      // Set scrolling state to prevent scroll detection interference
-      setIsScrolling(true);
+      window.scrollTo({ top: targetY, behavior: scrollBehavior });
       
-      // Calculate offset to account for fixed navbar
-      const navbarHeight = 80; // Approximate navbar height
-      const sectionTop = section.offsetTop - navbarHeight;
-      
-      // Instant scroll for team section, smooth for others
-      if (sectionId === 'team') {
-        window.scrollTo({
-          top: sectionTop,
-          behavior: 'instant'
-        });
-        // Reset scrolling state immediately for instant scroll
+      if (isMobile || sectionId === 'team') {
+        // Instant scroll - reset state immediately
         setIsScrolling(false);
       } else {
-        // Use smooth scrolling for other sections
-        window.scrollTo({
-          top: sectionTop,
-          behavior: 'smooth'
-        });
-        
-        // Reset scrolling state after smooth scroll completes
-        // Use a more sophisticated approach to detect scroll completion
+        // Smooth scroll - wait for completion
         let scrollTimeout;
         const handleScrollEnd = () => {
           clearTimeout(scrollTimeout);
           scrollTimeout = setTimeout(() => {
             setIsScrolling(false);
             window.removeEventListener('scroll', handleScrollEnd);
-          }, 150); // Small delay to ensure scroll has truly stopped
+          }, 150);
         };
-        
         window.addEventListener('scroll', handleScrollEnd, { passive: true });
       }
-      
-      // Close mobile menu after navigation
-      if (window.innerWidth < 1024) {
-        setIsOpen(false);
-        if (setIsMobileMenuOpen) {
-          setIsMobileMenuOpen(false);
-        }
+    };
+
+    // On mobile, close the sidebar first so the overlay doesn't block scrolling
+    if (window.innerWidth < 1024) {
+      setIsOpen(false);
+      if (setIsMobileMenuOpen) {
+        setIsMobileMenuOpen(false);
       }
+      // Use immediate scroll for mobile to avoid transition issues
+      setTimeout(performScroll, 50);
     } else {
-      console.warn(`Section with id "${sectionId}" not found`);
+      performScroll();
     }
   };
 
