@@ -1,7 +1,10 @@
 import React, { useState, useEffect } from 'react';
+import { BrowserProvider, Contract, JsonRpcProvider } from 'ethers';
 import useBlockchainStats from '../../hooks/useBlockchainStats';
 import useInstitutionStats from '../../hooks/useInstitutionStats';
 import useWalletRoles from '../../hooks/useWalletRoles';
+import contractAddress from '../../config/contractAddress.json';
+import contractABI from '../../config/abi.json';
 
 const AcademicStatsDisplay = ({ isMobile }) => {
     const [activeOrb, setActiveOrb] = useState(0);
@@ -48,16 +51,100 @@ const AcademicStatsDisplay = ({ isMobile }) => {
     const { contract, roleConstants } = useWalletRoles();
     const { stats: institutionStats } = useInstitutionStats(contract, roleConstants);
 
+    // Fallback contract for no-MetaMask case (like Certificates.jsx)
+    const [fallbackContract, setFallbackContract] = useState(null);
+    const [derivedInstitutionCount, setDerivedInstitutionCount] = useState(0);
+
+    // Setup fallback contract when no MetaMask
+    useEffect(() => {
+        const setupFallbackContract = async () => {
+            if (contract) return; // Use primary contract if available
+            
+            try {
+                // Prefer env-defined RPC, then browser-friendly Sepolia RPC fallbacks
+                const ENV_RPC = import.meta?.env?.VITE_RPC_URL;
+                const RPC_URLS = [
+                    ENV_RPC,
+                    'https://ethereum-sepolia.publicnode.com',
+                    'https://sepolia.infura.io/v3/9aa3d95b3bc440fa88ea12eaa4456161',
+                    'https://eth-sepolia.g.alchemy.com/v2/demo'
+                ].filter(Boolean);
+
+                let provider;
+                for (const rpcUrl of RPC_URLS) {
+                    try {
+                        const rpcProvider = new JsonRpcProvider(rpcUrl);
+                        await rpcProvider.getNetwork();
+                        provider = rpcProvider;
+                        console.log(`QuantumStats: Connected to fallback RPC: ${rpcUrl}`);
+                        break;
+                    } catch (rpcError) {
+                        console.warn(`QuantumStats: Failed to connect to RPC ${rpcUrl}:`, rpcError?.message || rpcError);
+                    }
+                }
+                
+                if (provider) {
+                    const fallbackContract = new Contract(
+                        contractAddress.sepolia.SoulboundCertificateNFT,
+                        contractABI.SoulboundCertificateNFT,
+                        provider
+                    );
+                    setFallbackContract(fallbackContract);
+                }
+            } catch (error) {
+                console.warn('QuantumStats: Failed to setup fallback contract:', error);
+            }
+        };
+
+        setupFallbackContract();
+    }, [contract]);
+
+    // Derived institution count (Dashboard/InstitutionAnalytics approach)
+    useEffect(() => {
+        const compute = async () => {
+            const activeContract = contract || fallbackContract;
+            if (!activeContract) { setDerivedInstitutionCount(0); return; }
+            
+            try {
+                const [verifiedIds, pendingIds, revokedIds] = await Promise.all([
+                    activeContract.getVerifiedCertificateIds(0, 1000).catch(() => []),
+                    activeContract.getPendingCertificateIds(0, 1000).catch(() => []),
+                    activeContract.getRevokedCertificateIds(0, 1000).catch(() => [])
+                ]);
+                const uniqueIds = Array.from(new Set([...(verifiedIds || []), ...(pendingIds || []), ...(revokedIds || [])]));
+                const issuerSet = new Set();
+                const batchSize = 200;
+                for (let i = 0; i < uniqueIds.length; i += batchSize) {
+                    const batch = uniqueIds.slice(i, i + batchSize);
+                    await Promise.all(batch.map(async (id) => {
+                        try {
+                            const cert = await activeContract.getCertificate(id);
+                            const issuer = cert?.institution || cert?.institutionAddress;
+                            if (issuer) issuerSet.add(issuer.toLowerCase());
+                        } catch {}
+                    }));
+                }
+                const zeroCert = (institutionStats?.activeInstitutionAddresses || []).map(a => a.toLowerCase());
+                zeroCert.forEach(a => issuerSet.add(a));
+                setDerivedInstitutionCount(issuerSet.size);
+            } catch {
+                setDerivedInstitutionCount(0);
+            }
+        };
+        compute();
+    }, [contract, fallbackContract, institutionStats?.activeInstitutionAddresses]);
+
     // Calculate real verification rate from blockchain data
     const realVerificationRate = totalCertificates > 0 
         ? Math.round((verifiedCertificates / totalCertificates) * 100)
         : 0;
 
-    // Use real data instead of fake stats - use institutionStats for accurate institution count
+    // Use derived institution count when available; else fall back to hook stats
     const realStats = {
         certificates: totalCertificates || 0,
-        // Prefer active authorized non-admin if present; if mismatch exists, prefer the explicit active count
-        institutions: (institutionStats.totalInstitutionsActive ?? institutionStats.totalInstitutions) || 0,
+        institutions: (derivedInstitutionCount && derivedInstitutionCount > 0)
+            ? derivedInstitutionCount
+            : ((institutionStats.totalInstitutionsActive ?? institutionStats.totalInstitutions) || 0),
         verification: realVerificationRate || 0
     };
 
