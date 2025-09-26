@@ -121,8 +121,14 @@ const NavigationSidebar = ({ isMobileMenuOpen, setIsMobileMenuOpen }) => {
       }
     };
 
+    // Use both mouse and touch events for better mobile support
     document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    document.addEventListener('touchstart', handleClickOutside);
+    
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('touchstart', handleClickOutside);
+    };
   }, [setIsMobileMenuOpen]);
 
   // Touch gesture handlers for mobile
@@ -151,15 +157,11 @@ const NavigationSidebar = ({ isMobileMenuOpen, setIsMobileMenuOpen }) => {
   };
 
   const scrollToSection = (sectionId) => {
-    console.log('scrollToSection called with:', sectionId);
-    
     const section = document.getElementById(sectionId);
     if (!section) {
       console.warn(`Section with id "${sectionId}" not found`);
       return;
     }
-
-    console.log('Section found:', section);
 
     // Set active section immediately for better UX
     setActiveSection(sectionId);
@@ -170,34 +172,33 @@ const NavigationSidebar = ({ isMobileMenuOpen, setIsMobileMenuOpen }) => {
     // Compute target Y with navbar offset - use offsetTop for more reliable positioning
     const navbarHeight = 80; // Approximate navbar height
     const targetY = section.offsetTop - navbarHeight;
-    
-    console.log('Target Y position:', targetY);
-    console.log('Current scroll position:', window.scrollY);
-    console.log('Section offsetTop:', section.offsetTop);
-    console.log('Section getBoundingClientRect().top:', section.getBoundingClientRect().top);
 
     const performScroll = () => {
-      console.log('Performing scroll to:', targetY);
-      
       // Use instant scroll for mobile to avoid broken transitions
       const isMobile = window.innerWidth < 1024;
-      const scrollBehavior = isMobile ? 'auto' : (sectionId === 'team' ? 'auto' : 'smooth');
+      const scrollBehavior = isMobile ? 'auto' : 'smooth';
       
-      console.log('Scroll behavior:', scrollBehavior, 'isMobile:', isMobile);
-      
-      window.scrollTo({ top: targetY, behavior: scrollBehavior });
-      
-      if (isMobile || sectionId === 'team') {
-        // Instant scroll - reset state immediately
-        console.log('Instant scroll - resetting state');
+      // Force scroll to work on mobile browsers
+      if (isMobile) {
+        // Try multiple methods for mobile compatibility
+        try {
+          window.scrollTo({ top: targetY, behavior: 'auto' });
+          // Fallback for older mobile browsers
+          document.documentElement.scrollTop = targetY;
+          document.body.scrollTop = targetY;
+        } catch (e) {
+          document.documentElement.scrollTop = targetY;
+        }
+        // Reset state immediately for mobile
         setIsScrolling(false);
       } else {
+        window.scrollTo({ top: targetY, behavior: scrollBehavior });
+        
         // Smooth scroll - wait for completion
         let scrollTimeout;
         const handleScrollEnd = () => {
           clearTimeout(scrollTimeout);
           scrollTimeout = setTimeout(() => {
-            console.log('Smooth scroll completed');
             setIsScrolling(false);
             window.removeEventListener('scroll', handleScrollEnd);
           }, 150);
@@ -208,15 +209,13 @@ const NavigationSidebar = ({ isMobileMenuOpen, setIsMobileMenuOpen }) => {
 
     // On mobile, close the sidebar first so the overlay doesn't block scrolling
     if (window.innerWidth < 1024) {
-      console.log('Mobile detected - closing sidebar first');
       setIsOpen(false);
       if (setIsMobileMenuOpen) {
         setIsMobileMenuOpen(false);
       }
-      // Use immediate scroll for mobile to avoid transition issues
-      setTimeout(performScroll, 50);
+      // Use immediate scroll for mobile - no delay to avoid issues
+      performScroll();
     } else {
-      console.log('Desktop - performing scroll immediately');
       performScroll();
     }
   };
