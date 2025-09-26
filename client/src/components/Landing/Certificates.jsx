@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { BrowserProvider, Contract } from 'ethers';
+import { BrowserProvider, Contract, JsonRpcProvider } from 'ethers';
 import HeroImage from "../../assets/hero.svg";
 import contractAddress from "../../config/contractAddress.json";
 import contractABI from "../../config/abi.json";
@@ -22,26 +22,32 @@ export default function Certificates() {
     const fetchRealCertificates = async () => {
       try {
         setLoading(true);
+        console.log('Starting certificate fetch...');
         
-        // Try to connect to blockchain
-        if (!window.ethereum) {
-          console.log('No MetaMask, using fallback');
-          setLoading(false);
-          return;
+        // Try to connect to blockchain (read-only fallback on mobile)
+        let provider;
+        if (window.ethereum) {
+          console.log('MetaMask detected, connecting to blockchain...');
+          provider = new BrowserProvider(window.ethereum);
+        } else {
+          console.log('No MetaMask detected, using public RPC provider for read-only access');
+          provider = new JsonRpcProvider('https://rpc.sepolia.org');
         }
 
-        const provider = new BrowserProvider(window.ethereum);
         const contract = new Contract(
-          contractAddress.SoulboundCertificateNFT,
+          contractAddress.sepolia.SoulboundCertificateNFT,
           contractABI.SoulboundCertificateNFT,
           provider
         );
 
         // Get total supply
+        console.log('Getting total supply...');
         const totalSupply = await contract.totalSupply();
         const total = Number(totalSupply);
+        console.log('Total supply:', total);
 
         if (total === 0) {
+          console.log('No certificates found');
           setLoading(false);
           return;
         }
@@ -50,20 +56,76 @@ export default function Certificates() {
         const numberOfCerts = Math.min(5, total);
         const tokenIds = [];
         
+        console.log(`Fetching ${numberOfCerts} certificates...`);
         for (let i = 0; i < numberOfCerts; i++) {
           try {
             const tokenId = await contract.tokenByIndex(total - 1 - i);
             tokenIds.push(Number(tokenId));
+            console.log(`Got token ID: ${tokenId}`);
           } catch (err) {
             console.log(`Error getting token at index ${i}:`, err);
           }
         }
 
+        console.log('Token IDs:', tokenIds);
         if (tokenIds.length > 0) {
-          // Process certificates using your existing utility
-          const processedCerts = await processCertificatesBatch(contract, tokenIds);
-          setCertificates(processedCerts);
-          setCurrentCertificate(processedCerts[0]);
+          // Process certificates using your existing utility with timeout
+          console.log('Processing certificates...');
+          
+          // Add timeout to prevent hanging on mobile
+          const processingPromise = processCertificatesBatch(contract, tokenIds);
+          const timeoutPromise = new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('Certificate processing timeout')), 15000)
+          );
+          
+          try {
+            const processedCerts = await Promise.race([processingPromise, timeoutPromise]);
+            console.log('Processed certificates:', processedCerts);
+            
+            if (processedCerts && processedCerts.length > 0) {
+              setCertificates(processedCerts);
+              setCurrentCertificate(processedCerts[0]);
+              console.log('Successfully set certificates:', processedCerts.length);
+            } else {
+              console.log('No valid certificates processed');
+            }
+          } catch (processError) {
+            console.error('Error processing certificates batch:', processError);
+            // Fallback: try to get basic certificate data without full processing
+            console.log('Attempting fallback certificate processing...');
+            try {
+              const fallbackCerts = [];
+              for (const tokenId of tokenIds.slice(0, 3)) { // Limit to 3 for fallback
+                try {
+                  const cert = await contract.getCertificate(tokenId);
+                  if (cert && cert.length > 0) {
+                    const courseName = await contract.getCourseName(cert[2]).catch(() => `Course ${cert[2]}`);
+                    fallbackCerts.push({
+                      id: tokenId.toString(),
+                      student: cert[0],
+                      institution: cert[1],
+                      courseName: courseName,
+                      grade: Number(cert[4]),
+                      isVerified: cert[5],
+                      isRevoked: cert[6],
+                      completionDate: new Date(Number(cert[3]) * 1000).toLocaleDateString(),
+                      completionTimestamp: Number(cert[3])
+                    });
+                  }
+                } catch (err) {
+                  console.log(`Fallback failed for token ${tokenId}:`, err.message);
+                }
+              }
+              
+              if (fallbackCerts.length > 0) {
+                console.log('Fallback certificates loaded:', fallbackCerts.length);
+                setCertificates(fallbackCerts);
+                setCurrentCertificate(fallbackCerts[0]);
+              }
+            } catch (fallbackError) {
+              console.error('Fallback processing also failed:', fallbackError);
+            }
+          }
         }
 
       } catch (error) {
@@ -169,6 +231,16 @@ export default function Certificates() {
             Real certificates from our blockchain
           </span>
         </h2>
+
+        {/* Debug Info for Mobile */}
+        <div className="mb-4 p-2 bg-gray-800/50 rounded text-xs text-gray-400">
+          <div>Debug Info:</div>
+          <div>Loading: {loading ? 'true' : 'false'}</div>
+          <div>Certificates count: {certificates.length}</div>
+          <div>Current certificate: {currentCertificate ? 'exists' : 'null'}</div>
+          <div>User Agent: {navigator.userAgent.includes('Mobile') ? 'Mobile' : 'Desktop'}</div>
+          <div>Window width: {typeof window !== 'undefined' ? window.innerWidth : 'N/A'}</div>
+        </div>
 
         {loading ? (
           <div className="flex flex-col items-center justify-center py-12 sm:py-16 lg:py-20">
