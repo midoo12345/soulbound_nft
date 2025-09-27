@@ -129,7 +129,7 @@ const QuickActions = memo(({
                   description={action.description}
                   icon={action.icon}
                   color={action.color}
-                  onClick={(event) => handleActionClick(action, event)}
+                  onClick={onActionClick ? (event) => handleActionClick(action, event) : undefined}
                   isVisible={true}
                 />
               </DashboardErrorBoundary>

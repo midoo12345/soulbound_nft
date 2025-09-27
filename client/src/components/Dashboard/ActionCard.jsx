@@ -108,6 +108,7 @@ const ActionCard = memo(({
     }
     if (onClick) {
       onClick(e);
+      // Don't prevent default for Link components - let React Router handle navigation
     }
   };
 

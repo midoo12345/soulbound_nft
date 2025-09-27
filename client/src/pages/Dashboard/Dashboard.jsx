@@ -945,10 +945,6 @@ const Dashboard = () => {
                     {/* Quick Actions Section - Refactored */}
           <QuickActions 
             userRoles={roles}
-            onActionClick={(action, event) => {
-              // Optional: Add analytics or custom handling
-              console.log(`Action clicked: ${action.title}`, action);
-            }}
           />
         </div>
       </div>
