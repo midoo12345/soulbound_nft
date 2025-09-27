@@ -59,10 +59,18 @@ const Dashboard = () => {
   const [isLoading, setIsLoading] = useState(true);
   // Fallback: institution count derived like InstitutionAnalytics (issuers + zero-cert institutions)
   const [derivedInstitutionCount, setDerivedInstitutionCount] = useState(0);
+  const [institutionAnalysis, setInstitutionAnalysis] = useState({
+    institutions: [],
+    averageCertsPerInstitution: 0
+  });
+  
+  
   const displayInstitutionCount = useMemo(() => {
-    const hookCount = institutionStats?.totalInstitutions || 0;
-    return hookCount > 0 ? hookCount : (derivedInstitutionCount || 0);
-  }, [institutionStats?.totalInstitutions, derivedInstitutionCount]);
+    // Use derived institution count when available; else fall back to hook stats (same as QuantumStatsDisplay)
+    return (derivedInstitutionCount && derivedInstitutionCount > 0)
+      ? derivedInstitutionCount
+      : ((institutionStats.totalInstitutionsActive ?? institutionStats.totalInstitutions) || 0);
+  }, [derivedInstitutionCount, institutionStats?.totalInstitutionsActive, institutionStats?.totalInstitutions]);
   
   // Enhanced error state management
   const [hasRenderError, setHasRenderError] = useState(false);
@@ -135,7 +143,7 @@ const Dashboard = () => {
           // Refresh stats every 3 blocks for faster real-time updates
           if (blockNumber % 3 === 0) {
             refreshStats();
-            refreshDerivedInstitutionCount();
+            refreshInstitutionAnalysis(false); // Use throttled update
           }
         });
       }
@@ -154,43 +162,154 @@ const Dashboard = () => {
     };
   }, [contract, provider, handleCertificateEvent, refreshStats]);
 
-  // Same logic as InstitutionAnalytics to compute institution count
-  const refreshDerivedInstitutionCount = useCallback(async () => {
+  // Performance optimization: throttle updates to prevent excessive re-renders
+  const [lastAnalysisUpdate, setLastAnalysisUpdate] = useState(0);
+  const ANALYSIS_UPDATE_THROTTLE = 5000; // 5 seconds minimum between updates
+  
+  // Comprehensive institution analysis like InstitutionAnalytics.jsx
+  const refreshInstitutionAnalysis = useCallback(async (forceUpdate = false) => {
     if (!contract) return;
+    
+    // Throttle updates unless forced
+    const now = Date.now();
+    if (!forceUpdate && (now - lastAnalysisUpdate) < ANALYSIS_UPDATE_THROTTLE) {
+      return;
+    }
+    
     try {
       const [verifiedIds, pendingIds, revokedIds] = await Promise.all([
         contract.getVerifiedCertificateIds(0, 1000).catch(() => []),
         contract.getPendingCertificateIds(0, 1000).catch(() => []),
         contract.getRevokedCertificateIds(0, 1000).catch(() => [])
       ]);
+      
       const uniqueIds = Array.from(new Set([...(verifiedIds || []), ...(pendingIds || []), ...(revokedIds || [])]));
+      
+      if (uniqueIds.length === 0) {
+        setInstitutionAnalysis({
+          institutions: [],
+          averageCertsPerInstitution: 0
+        });
+        setDerivedInstitutionCount(0);
+        return;
+      }
+
+      // Track institution performance like InstitutionAnalytics
+      const institutionPerformance = {};
       const issuerSet = new Set();
-      // Collect issuers from all certificates
+      
+      // Analyze all certificates to build institution profiles
       const batchSize = 200;
       for (let i = 0; i < uniqueIds.length; i += batchSize) {
         const batch = uniqueIds.slice(i, i + batchSize);
         await Promise.all(batch.map(async (id) => {
           try {
             const cert = await contract.getCertificate(id);
-            const issuer = cert?.institution || cert?.institutionAddress;
-            if (issuer) issuerSet.add(issuer.toLowerCase());
-          } catch {}
+            if (cert && cert.institution) {
+              const institutionAddress = cert.institution.toLowerCase();
+              issuerSet.add(institutionAddress);
+              
+              if (!institutionPerformance[institutionAddress]) {
+                institutionPerformance[institutionAddress] = {
+                  total: 0,
+                  verified: 0,
+                  pending: 0,
+                  revoked: 0
+                };
+              }
+              
+              institutionPerformance[institutionAddress].total++;
+              
+              if (cert.isVerified) {
+                institutionPerformance[institutionAddress].verified++;
+              } else {
+                institutionPerformance[institutionAddress].pending++;
+              }
+            }
+          } catch (error) {
+            console.warn(`Error fetching certificate ${id} for institution analysis:`, error);
+          }
         }));
       }
-      // Include zero-certificate institutions from real-time stats
-      const zeroCert = (institutionStats?.activeInstitutionAddresses || []).map(a => a.toLowerCase());
-      zeroCert.forEach(a => issuerSet.add(a));
-      setDerivedInstitutionCount(issuerSet.size);
+
+      // Get revoked certificates and adjust counts
+      try {
+        const revokedIds = await contract.getRevokedCertificateIds(0, 1000);
+        for (const id of revokedIds) {
+          try {
+            const cert = await contract.getCertificate(id);
+            if (cert && cert.institution) {
+              const institutionAddress = cert.institution.toLowerCase();
+              if (institutionPerformance[institutionAddress]) {
+                institutionPerformance[institutionAddress].revoked++;
+                institutionPerformance[institutionAddress].verified--; // Adjust verified count
+              }
+            }
+          } catch (error) {
+            console.warn(`Error fetching revoked certificate ${id}:`, error);
+          }
+        }
+      } catch (error) {
+        console.warn('Error fetching revoked certificates:', error);
+      }
+
+      // Calculate institution list with real certificate counts
+      const institutionList = [];
+      let totalCertificates = 0;
+
+      Object.entries(institutionPerformance).forEach(([address, metrics]) => {
+        if (metrics.total > 0) {
+          institutionList.push({
+            address: address,
+            name: `${address.slice(0, 6)}...${address.slice(-4)}`,
+            certificates: metrics.total,
+            verified: metrics.verified,
+            pending: metrics.pending,
+            revoked: metrics.revoked
+          });
+          totalCertificates += metrics.total;
+        }
+      });
+
+      // Include institutions with zero certificates using addresses from real-time stats
+      const zeroCertInstitutions = (institutionStats?.activeInstitutionAddresses || [])
+        .map(addr => addr.toLowerCase())
+        .filter(addr => !institutionList.some(inst => inst.address === addr))
+        .map(addr => ({
+          address: addr,
+          name: `${addr.slice(0, 6)}...${addr.slice(-4)}`,
+          certificates: 0,
+          verified: 0,
+          pending: 0,
+          revoked: 0
+        }));
+
+      const mergedInstitutions = [...institutionList, ...zeroCertInstitutions];
+      const totalInstitutions = mergedInstitutions.length;
+      const averageCertsPerInstitution = totalInstitutions > 0 ? Math.floor(totalCertificates / totalInstitutions) : 0;
+
+      setInstitutionAnalysis({
+        institutions: mergedInstitutions,
+        averageCertsPerInstitution: averageCertsPerInstitution
+      });
+      
+      setDerivedInstitutionCount(totalInstitutions);
+      setLastAnalysisUpdate(now);
     } catch (e) {
-      // ignore fallback errors
+      console.warn('Error in institution analysis:', e);
+      setInstitutionAnalysis({
+        institutions: [],
+        averageCertsPerInstitution: 0
+      });
+      setDerivedInstitutionCount(0);
     }
-  }, [contract, institutionStats?.activeInstitutionAddresses]);
+  }, [contract, institutionStats?.activeInstitutionAddresses, lastAnalysisUpdate]);
 
   useEffect(() => {
     if (contract) {
-      refreshDerivedInstitutionCount();
+      refreshInstitutionAnalysis(true); // Force initial update
     }
-  }, [contract, refreshDerivedInstitutionCount]);
+  }, [contract, refreshInstitutionAnalysis]);
 
   // Wallet initialization is now handled by useWalletRoles hook
   // Initialize dashboard when wallet is ready
@@ -399,6 +518,7 @@ const Dashboard = () => {
             isLoading={statsLoading}
             error={statsError}
             userRoles={roles}
+            contract={contract}
           />
 
           {/* Advanced Analytics and Secondary Info Grid with Error Boundaries */}
@@ -661,16 +781,38 @@ const Dashboard = () => {
                     </div>
                     
                     <div className="p-3 bg-violet-900/20 rounded-lg border border-violet-500/20">
-                      <div className="flex justify-between items-center mb-1">
-                        <span className="text-xs text-gray-400">Avg. Certs per Institution</span>
-                        <span className="w-2 h-2 bg-green-400 rounded-full"></span>
+                      <div className="flex justify-between items-center mb-3">
+                        <span className="text-xs text-gray-400">Institution Breakdown</span>
+                        <div className="flex items-center space-x-2">
+                          <span className="w-2 h-2 bg-green-400 rounded-full"></span>
+                          <span className="text-xs text-gray-500">
+                            {institutionAnalysis.institutions.length} institutions
+                          </span>
+                        </div>
                       </div>
-                      <div className="text-xl font-bold text-white">
-                        {displayInstitutionCount > 0 
-                          ? Math.floor((institutionStats?.totalCertificates || 0) / displayInstitutionCount) 
-                          : 0}
+                      
+                      {/* Institution List */}
+                      <div className="space-y-1 max-h-40 overflow-y-auto">
+                        {institutionAnalysis.institutions.length > 0 ? (
+                          institutionAnalysis.institutions.map((inst, index) => (
+                            <div key={inst.address} className="flex justify-between items-center text-xs hover:bg-gray-800/30 rounded px-1 py-0.5">
+                              <span className="text-gray-300 font-mono">{inst.name}</span>
+                              <div className="flex space-x-2">
+                                <span className="text-green-400">{inst.verified}</span>
+                                <span className="text-amber-400">{inst.pending}</span>
+                                <span className="text-red-400">{inst.revoked || 0}</span>
+                                <span className="text-white font-bold">({inst.certificates})</span>
+                              </div>
+                            </div>
+                          ))
+                        ) : (
+                          <div className="text-xs text-gray-500 text-center py-2">No institutions found</div>
+                        )}
                       </div>
-                      <div className="text-xs text-violet-400 mt-1">Certificates issued</div>
+                      
+                      <div className="text-xs text-violet-400 mt-2">
+                        Format: Verified | Pending | Revoked (Total)
+                      </div>
                     </div>
                   </div>
                   
@@ -680,22 +822,32 @@ const Dashboard = () => {
                       <span className="text-xs text-gray-400">Institution Distribution</span>
                       <span className="text-xs font-mono text-violet-400">By Certificate Volume</span>
                     </div>
-                    <div className="w-full h-10 bg-gray-800/40 rounded overflow-hidden relative">
+                    <div className="w-full h-16 bg-gray-800/40 rounded overflow-hidden relative">
                       <div className="absolute inset-0 flex items-end">
-                        {(displayInstitutionCount || 0) > 0 ? (
-                          [...Array(Math.min(displayInstitutionCount || 0, 10))].map((_, i) => (
-                            <div 
-                              key={i} 
-                              className="flex-1 mx-px bg-violet-500/40"
-                              style={{ height: `${20 + Math.random() * 60}%` }}
-                            ></div>
-                          ))
+                        {institutionAnalysis.institutions.length > 0 ? (
+                          institutionAnalysis.institutions.slice(0, 20).map((inst, i) => {
+                            const maxCerts = Math.max(...institutionAnalysis.institutions.map(i => i.certificates));
+                            const height = maxCerts > 0 ? `${15 + (inst.certificates / maxCerts) * 70}%` : '15%';
+                            return (
+                              <div 
+                                key={inst.address} 
+                                className="flex-1 mx-px bg-violet-500/40 hover:bg-violet-500/60 transition-colors"
+                                style={{ height }}
+                                title={`${inst.name}: ${inst.verified}V ${inst.pending}P ${inst.revoked}R (${inst.certificates} total)`}
+                              ></div>
+                            );
+                          })
                         ) : (
                           <div className="w-full h-full flex items-center justify-center">
                             <span className="text-xs text-gray-500">No data available</span>
                           </div>
                         )}
                       </div>
+                    </div>
+                    <div className="text-xs text-gray-500 mt-1 text-center">
+                      {institutionAnalysis.institutions.length > 0 && (
+                        `Total: ${institutionAnalysis.institutions.reduce((sum, inst) => sum + inst.certificates, 0)} certificates`
+                      )}
                     </div>
                   </div>
                 </div>
