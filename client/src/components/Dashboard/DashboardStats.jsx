@@ -1,9 +1,12 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import PropTypes from 'prop-types';
+import { Contract, JsonRpcProvider } from 'ethers';
 import StatCard from './StatCard';
 import StatsGrid from './StatsGrid';
 import DashboardErrorBoundary from '../ErrorBoundary/DashboardErrorBoundary';
 import { StatCardSkeleton } from '../Loading/LoadingSkeletons';
+import contractAddress from '../../config/contractAddress.json';
+import contractABI from '../../config/abi.json';
 
 /**
  * DashboardStats Component
@@ -16,9 +19,93 @@ const DashboardStats = ({
   error = null,
   userRoles = {},
   className = '',
-  onStatClick
+  onStatClick,
+  contract = null
 }) => {
   const { isInstitution = false, isAdmin = false } = userRoles;
+  
+  // State for derived institution count (same approach as QuantumStatsDisplay)
+  const [derivedInstitutionCount, setDerivedInstitutionCount] = useState(0);
+  const [fallbackContract, setFallbackContract] = useState(null);
+
+  // Setup fallback contract when no contract provided
+  useEffect(() => {
+    const setupFallbackContract = async () => {
+      if (contract) return; // Use primary contract if available
+      
+      try {
+        // Prefer env-defined RPC, then browser-friendly Sepolia RPC fallbacks
+        const ENV_RPC = import.meta?.env?.VITE_RPC_URL;
+        const RPC_URLS = [
+          ENV_RPC,
+          'https://ethereum-sepolia.publicnode.com',
+          'https://sepolia.infura.io/v3/9aa3d95b3bc440fa88ea12eaa4456161',
+          'https://eth-sepolia.g.alchemy.com/v2/demo'
+        ].filter(Boolean);
+
+        let provider;
+        for (const rpcUrl of RPC_URLS) {
+          try {
+            const rpcProvider = new JsonRpcProvider(rpcUrl);
+            await rpcProvider.getNetwork();
+            provider = rpcProvider;
+            console.log(`DashboardStats: Connected to fallback RPC: ${rpcUrl}`);
+            break;
+          } catch (rpcError) {
+            console.warn(`DashboardStats: Failed to connect to RPC ${rpcUrl}:`, rpcError?.message || rpcError);
+          }
+        }
+        
+        if (provider) {
+          const fallbackContract = new Contract(
+            contractAddress.sepolia.SoulboundCertificateNFT,
+            contractABI.SoulboundCertificateNFT,
+            provider
+          );
+          setFallbackContract(fallbackContract);
+        }
+      } catch (error) {
+        console.warn('DashboardStats: Failed to setup fallback contract:', error);
+      }
+    };
+
+    setupFallbackContract();
+  }, [contract]);
+
+  // Derived institution count (Dashboard/InstitutionAnalytics approach)
+  useEffect(() => {
+    const compute = async () => {
+      const activeContract = contract || fallbackContract;
+      if (!activeContract) { setDerivedInstitutionCount(0); return; }
+      
+      try {
+        const [verifiedIds, pendingIds, revokedIds] = await Promise.all([
+          activeContract.getVerifiedCertificateIds(0, 1000).catch(() => []),
+          activeContract.getPendingCertificateIds(0, 1000).catch(() => []),
+          activeContract.getRevokedCertificateIds(0, 1000).catch(() => [])
+        ]);
+        const uniqueIds = Array.from(new Set([...(verifiedIds || []), ...(pendingIds || []), ...(revokedIds || [])]));
+        const issuerSet = new Set();
+        const batchSize = 200;
+        for (let i = 0; i < uniqueIds.length; i += batchSize) {
+          const batch = uniqueIds.slice(i, i + batchSize);
+          await Promise.all(batch.map(async (id) => {
+            try {
+              const cert = await activeContract.getCertificate(id);
+              const issuer = cert?.institution || cert?.institutionAddress;
+              if (issuer) issuerSet.add(issuer.toLowerCase());
+            } catch {}
+          }));
+        }
+        const zeroCert = (institutionStats?.activeInstitutionAddresses || []).map(a => a.toLowerCase());
+        zeroCert.forEach(a => issuerSet.add(a));
+        setDerivedInstitutionCount(issuerSet.size);
+      } catch {
+        setDerivedInstitutionCount(0);
+      }
+    };
+    compute();
+  }, [contract, fallbackContract, institutionStats?.activeInstitutionAddresses]);
 
   // Memoized stats configuration to prevent unnecessary re-renders
   // Different stats based on user role
@@ -110,7 +197,9 @@ const DashboardStats = ({
         {
           id: 'total-institutions',
           title: 'Active Institutions',
-          value: institutionStats?.totalInstitutions || 0,
+          value: (derivedInstitutionCount && derivedInstitutionCount > 0)
+            ? derivedInstitutionCount
+            : ((institutionStats.totalInstitutionsActive ?? institutionStats.totalInstitutions) || 0),
           color: 'purple',
           progress: 100,
           tooltip: 'Authorized institutions registered on the blockchain (excludes admin accounts)',
@@ -330,6 +419,8 @@ DashboardStats.propTypes = {
     verifiedCertificates: PropTypes.number,
     issuedByCurrentInstitution: PropTypes.number,
     totalInstitutions: PropTypes.number,
+    totalInstitutionsActive: PropTypes.number,
+    activeInstitutionAddresses: PropTypes.array,
     lastUpdated: PropTypes.oneOfType([PropTypes.string, PropTypes.number])
   }),
   isLoading: PropTypes.bool,
@@ -342,7 +433,8 @@ DashboardStats.propTypes = {
     isInstitution: PropTypes.bool
   }),
   className: PropTypes.string,
-  onStatClick: PropTypes.func
+  onStatClick: PropTypes.func,
+  contract: PropTypes.object
 };
 
 // Default props
@@ -351,7 +443,8 @@ DashboardStats.defaultProps = {
   isLoading: false,
   error: null,
   userRoles: {},
-  className: ''
+  className: '',
+  contract: null
 };
 
 export default DashboardStats;

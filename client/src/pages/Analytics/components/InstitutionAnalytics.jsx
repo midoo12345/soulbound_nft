@@ -678,8 +678,8 @@ const InstitutionAnalytics = ({
                  datasets: [{
                    label: 'Metrics',
                    data: [
-                     realTimeStats.totalInstitutions || 0,
-                     realTimeStats.totalInstitutions || 0,
+                     institutionData.institutions.length,
+                     institutionData.institutions.filter(inst => inst.certificates > 0).length,
                      realTimeStats.totalCertificates > 0 
                        ? Math.round((realTimeStats.verifiedCertificates / realTimeStats.totalCertificates) * 100) 
                        : 0,
