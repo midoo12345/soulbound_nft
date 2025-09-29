@@ -80,7 +80,8 @@ function CertificateForm({ isAdmin = false, userAddress: initialUserAddress = ''
   }, []);
 
   // Memoize the checkAuthorization function so it can be used in useEffect cleanup
-  const checkAuthorization = useCallback(async (showToast = false) => {
+  const checkAuthorization = useCallback(async (options = {}) => {
+    const { showToast = false, showSpinner = false } = options;
     // Skip check if user is already identified as admin from props
     if (isAdmin) {
       setIsAuthorized(true);
@@ -91,7 +92,10 @@ function CertificateForm({ isAdmin = false, userAddress: initialUserAddress = ''
     if (!isComponentMounted.current) return;
     
     try {
-      setCheckingAuth(true);
+      // Only show UI spinner when explicitly requested (e.g., manual check)
+      if (showSpinner) {
+        setCheckingAuth(true);
+      }
       
       // Skip check if no provider is available
       if (!window.ethereum) {
@@ -185,26 +189,26 @@ function CertificateForm({ isAdmin = false, userAddress: initialUserAddress = ''
     // Define event handlers outside of conditional blocks so they're accessible in cleanup
     const handleAccountsChanged = (accounts) => {
       if (accounts.length > 0 && accounts[0] !== userAddress) {
-        // Address changed, re-check authorization
-        checkAuthorization(true);
+        // Address changed, re-check authorization (background)
+        checkAuthorization({ showToast: true, showSpinner: false });
       }
     };
     
     // Set up network change listener
     const handleChainChanged = () => {
-      // Network changed, re-check authorization
-      checkAuthorization(true);
+      // Network changed, re-check authorization (background)
+      checkAuthorization({ showToast: true, showSpinner: false });
     };
     
     // Skip authorization check if isAdmin is true
     if (!isAdmin) {
       // Don't show toast on initial load
-      checkAuthorization(false);
+      checkAuthorization({ showToast: false, showSpinner: false });
       
       // Set up periodic auth checking (but not for admins)
       authCheckIntervalRef.current = setInterval(() => {
         // Show toast for automatic checks if status changes
-        checkAuthorization(true);
+        checkAuthorization({ showToast: true, showSpinner: false });
       }, AUTH_CHECK_INTERVAL);
       
       if (window.ethereum) {
@@ -385,8 +389,8 @@ function CertificateForm({ isAdmin = false, userAddress: initialUserAddress = ''
     try {
       // Skip authorization check for admins
       if (!isAdmin) {
-        // Check authorization status right before proceeding
-        await checkAuthorization(false);
+        // Check authorization status right before proceeding (background)
+        await checkAuthorization({ showToast: false, showSpinner: false });
         
         // Verify authorization again before proceeding
         if (!isAuthorized) {
@@ -778,7 +782,7 @@ function CertificateForm({ isAdmin = false, userAddress: initialUserAddress = ''
             <h3 className="text-lg font-medium">Authorization Error</h3>
             <p className="mt-1">Your institution is not authorized to issue certificates. Please contact the administrator.</p>
             <button 
-              onClick={() => checkAuthorization(true)}
+              onClick={() => checkAuthorization({ showToast: true, showSpinner: true })}
               className="mt-2 px-4 py-1 bg-red-700 hover:bg-red-600 rounded text-sm font-medium transition-colors"
             >
               Check Status Again
