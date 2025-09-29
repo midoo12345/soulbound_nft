@@ -122,7 +122,8 @@ export const DASHBOARD_ACTIONS = [
     to: '/dashboard/analytics',
     icon: <ActionIcons.Analytics />,
     color: 'teal',
-    requiredRoles: [RolePermissions.ADMIN, RolePermissions.INSTITUTION],
+    // Restrict analytics page to admins only in quick actions
+    requiredRoles: [RolePermissions.ADMIN],
     priority: 7
   }
 ];
