@@ -261,13 +261,13 @@ const DashboardStats = ({
     {
       id: 'verified-certificates',
       title: 'Verified Certificates',
-      value: institutionStats?.verifiedCertificates || 0,
+      value: (institutionStats?.verifiedByCurrentInstitution ?? 0),
       color: 'blue',
       progress: Math.min(
         100, 
-        ((institutionStats?.verifiedCertificates || 0) / Math.max(1, institutionStats?.totalCertificates || 1)) * 100
+        ((institutionStats?.verifiedByCurrentInstitution || 0) / Math.max(1, institutionStats?.issuedByCurrentInstitution || 1)) * 100
       ),
-      tooltip: 'Certificates that have been verified by authorized institutions on the blockchain',
+      tooltip: 'Certificates issued by your institution that are currently verified',
       icon: (
         <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path 
@@ -286,9 +286,9 @@ const DashboardStats = ({
       color: 'orange',
       progress: Math.min(
         100, 
-        ((institutionStats?.pendingCertificates || 0) / Math.max(1, institutionStats?.totalCertificates || 1)) * 100
+        ((institutionStats?.pendingCertificates || 0) / Math.max(1, institutionStats?.issuedByCurrentInstitution || 1)) * 100
       ),
-      tooltip: 'Certificates awaiting verification from authorized institutions',
+      tooltip: 'Your institution\'s certificates awaiting verification',
       icon: (
         <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path 
@@ -306,13 +306,13 @@ const DashboardStats = ({
     {
       id: 'institution-verification-rate',
       title: 'Institution Verification Rate',
-      value: `${Math.floor(((institutionStats?.verifiedCertificates || 0) / Math.max(1, institutionStats?.issuedByCurrentInstitution || 1)) * 100)}%`,
+      value: `${Math.floor(((institutionStats?.verifiedByCurrentInstitution || 0) / Math.max(1, institutionStats?.issuedByCurrentInstitution || 1)) * 100)}%`,
       color: 'teal',
       progress: Math.min(
         100, 
-        ((institutionStats?.verifiedCertificates || 0) / Math.max(1, institutionStats?.issuedByCurrentInstitution || 1)) * 100
+        ((institutionStats?.verifiedByCurrentInstitution || 0) / Math.max(1, institutionStats?.issuedByCurrentInstitution || 1)) * 100
       ),
-      tooltip: "Verification rate for certificates issued by your institution",
+      tooltip: "Verification rate for your institution's issued certificates",
       icon: (
         <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path 
@@ -327,13 +327,13 @@ const DashboardStats = ({
     {
       id: 'revoked-certificates',
       title: 'Revoked Certificates',
-      value: institutionStats?.revokedCertificates || 0,
+      value: (institutionStats?.revokedByCurrentInstitution ?? 0),
       color: 'red',
       progress: Math.min(
         100, 
-        ((institutionStats?.revokedCertificates || 0) / Math.max(1, institutionStats?.totalCertificates || 1)) * 100
+        ((institutionStats?.revokedByCurrentInstitution || 0) / Math.max(1, institutionStats?.issuedByCurrentInstitution || 1)) * 100
       ),
-      tooltip: 'Certificates that have been revoked and are no longer valid',
+      tooltip: 'Your institution\'s certificates that have been revoked',
       icon: (
         <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path 
