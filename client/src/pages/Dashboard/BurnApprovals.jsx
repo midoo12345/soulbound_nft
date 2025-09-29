@@ -439,10 +439,12 @@ const BurnApprovals = () => {
   }, [burnRequests, searchTerm, filterStatus, sortOrder, filterAndSortRequests]);
   
   // Add a function to check if timelock has expired
+  // NOTE: here requestTime actually represents the executionTime emitted by the event
+  // So the timelock is considered expired when now >= executionTime
   const isTimelockExpired = (requestTime) => {
-    if (!requestTime || !burnTimelock) return false;
+    if (!requestTime) return false;
     const now = Date.now();
-    return (now - requestTime.getTime()) >= burnTimelock;
+    return now >= requestTime.getTime();
   };
   
   // If user is not admin or institution, show access denied
@@ -624,15 +626,15 @@ const BurnApprovals = () => {
                               <div className="text-xs text-gray-400 mt-1">
                                 <FaClock className="inline mr-1" />
                                 {(() => {
-                                  const elapsed = Date.now() - request.burnRequestTime.getTime();
-                                  const remaining = Math.max(0, burnTimelock - elapsed);
+                                  // remaining is based on execution time, not request time + timelock
+                                  const remaining = Math.max(0, request.burnRequestTime.getTime() - Date.now());
                                   if (remaining <= 0) return "Timelock expired";
-                                  
+
                                   // Format the remaining time
                                   const days = Math.floor(remaining / (1000 * 60 * 60 * 24));
                                   const hours = Math.floor((remaining % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
                                   const minutes = Math.floor((remaining % (1000 * 60 * 60)) / (1000 * 60));
-                                  
+
                                   if (days > 0) return `${days}d ${hours}h remaining`;
                                   if (hours > 0) return `${hours}h ${minutes}m remaining`;
                                   return `${minutes}m remaining`;

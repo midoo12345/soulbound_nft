@@ -42,23 +42,23 @@ const ApprovalConfirmationModal = ({
   
   // Update timelock remaining time
   useEffect(() => {
-    if (!certificate || !burnTimelock) return;
+    if (!certificate) return;
     
     const calculateTimeRemaining = () => {
       const now = Date.now();
-      const requestTime = new Date(certificate.burnRequestTime).getTime();
-      const elapsed = now - requestTime;
-      const remaining = Math.max(0, burnTimelock - elapsed);
+      // NOTE: certificate.burnRequestTime stores executionTime from the event
+      const executionTimeMs = new Date(certificate.burnRequestTime).getTime();
+      const remaining = Math.max(0, executionTimeMs - now);
       
       setTimelockRemaining(remaining);
-      setIsTimelockExpired(remaining <= 0);
+      setIsTimelockExpired(now >= executionTimeMs);
     };
     
     calculateTimeRemaining();
     const interval = setInterval(calculateTimeRemaining, 60000); // Update every minute
     
     return () => clearInterval(interval);
-  }, [certificate, burnTimelock]);
+  }, [certificate]);
   
   // Format timelock remaining for display
   const formatTimelockRemaining = () => {
