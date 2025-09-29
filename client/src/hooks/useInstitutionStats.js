@@ -17,6 +17,9 @@ const useInstitutionStats = (contract, roleConstants, currentAccount) => {
     verifiedCertificates: 0,
     pendingCertificates: 0,    // 🔥 DIRECT pending count
     revokedCertificates: 0,    // 🔥 DIRECT revoked count
+    // Institution-scoped metrics (filled when viewer is an institution)
+    verifiedByCurrentInstitution: 0,
+    revokedByCurrentInstitution: 0,
     issuedByCurrentInstitution: 0,
     activeInstitutionAddresses: [],
     lastUpdated: null
@@ -171,7 +174,7 @@ const useInstitutionStats = (contract, roleConstants, currentAccount) => {
       const [
         totalSupply,
         verifiedCountBN,
-        revokedCountBN,
+        revokedCountFalseTrueBN,
         pendingCountBN,
         activeInstitutionAddresses,
         allRoleHoldersNonAdmin,
@@ -181,7 +184,8 @@ const useInstitutionStats = (contract, roleConstants, currentAccount) => {
         contract.totalSupply(),
         // Global verified count (verified=true, revoked=false)
         contract.countCertificatesByStatus(true, false),
-        // Global revoked count (verified=false, revoked=true)
+        // Global revoked counts may include verified=true & revoked=true if allowed by lifecycle
+        // Start with (verified=false, revoked=true)
         contract.countCertificatesByStatus(false, true),
         // Global pending count (verified=false, revoked=false)
         contract.countCertificatesByStatus(false, false),
@@ -195,8 +199,10 @@ const useInstitutionStats = (contract, roleConstants, currentAccount) => {
           Promise.resolve(0)
       ]);
 
-      // Calculate institution-specific pending counts if this is an institution
+      // Calculate institution-specific counts if this is an institution
       let institutionSpecificPendingCount = Number(pendingCountBN?.toString?.() || pendingCountBN || 0); // Default to global
+      let institutionSpecificVerifiedCount = 0;
+      let institutionSpecificRevokedCount = 0;
       
       if (isCurrentAccountInstitution && currentAccount) {
         try {
@@ -212,8 +218,10 @@ const useInstitutionStats = (contract, roleConstants, currentAccount) => {
             startIndex += pageSize;
           }
           
-          // Batch fetch certificate statuses to count pending (= not verified and not revoked)
+          // Batch fetch certificate statuses to count institution-scoped metrics
           let pendingForInstitution = 0;
+          let verifiedForInstitution = 0;
+          let revokedForInstitution = 0;
           const batchSize = 500;
           for (let i = 0; i < allTokenIds.length; i += batchSize) {
             const batch = allTokenIds.slice(i, i + batchSize);
@@ -224,6 +232,8 @@ const useInstitutionStats = (contract, roleConstants, currentAccount) => {
               for (let j = 0; j < batch.length; j++) {
                 const isVerified = Boolean(verificationStatuses[j]);
                 const isRevoked = Boolean(revocationStatuses[j]);
+                if (isVerified && !isRevoked) verifiedForInstitution++;
+                if (isRevoked) revokedForInstitution++;
                 if (!isVerified && !isRevoked) pendingForInstitution++;
               }
             } catch (batchErr) {
@@ -234,6 +244,8 @@ const useInstitutionStats = (contract, roleConstants, currentAccount) => {
                   const cert = await contract.getCertificate(tokenId);
                   const isVerified = Boolean(cert[6]);
                   const isRevoked = Boolean(cert[8]);
+                  if (isVerified && !isRevoked) verifiedForInstitution++;
+                  if (isRevoked) revokedForInstitution++;
                   if (!isVerified && !isRevoked) pendingForInstitution++;
                 } catch (singleErr) {
                   console.warn(`useInstitutionStats: Failed to fetch certificate ${tokenId}:`, singleErr);
@@ -242,6 +254,8 @@ const useInstitutionStats = (contract, roleConstants, currentAccount) => {
             }
           }
           institutionSpecificPendingCount = pendingForInstitution;
+          institutionSpecificVerifiedCount = verifiedForInstitution;
+          institutionSpecificRevokedCount = revokedForInstitution;
           console.log('useInstitutionStats: Institution-specific pending count computed with pagination:', institutionSpecificPendingCount);
         } catch (error) {
           console.warn('useInstitutionStats: Error calculating institution-specific pending count, using global:', error);
@@ -250,7 +264,14 @@ const useInstitutionStats = (contract, roleConstants, currentAccount) => {
 
       // Extract counts from direct contract arrays
       const verifiedCount = Number(verifiedCountBN?.toString?.() || verifiedCountBN || 0);
-      const revokedCount = Number(revokedCountBN?.toString?.() || revokedCountBN || 0);
+      // Also count (verified=true, revoked=true) if present, then sum both revoked branches
+      let revokedTrueTrue = 0;
+      try {
+        const extra = await contract.countCertificatesByStatus(true, true);
+        revokedTrueTrue = Number(extra?.toString?.() || extra || 0);
+      } catch {}
+      const revokedFalseTrue = Number(revokedCountFalseTrueBN?.toString?.() || revokedCountFalseTrueBN || 0);
+      const revokedCount = revokedFalseTrue + revokedTrueTrue;
       const pendingCountGlobal = Number(pendingCountBN?.toString?.() || pendingCountBN || 0);
       const pendingCount = isCurrentAccountInstitution ? institutionSpecificPendingCount : pendingCountGlobal;
 
@@ -272,6 +293,8 @@ const useInstitutionStats = (contract, roleConstants, currentAccount) => {
         verifiedCertificates: verifiedCount,
         pendingCertificates: pendingCount,  // 🔥 DIRECT pending count
         revokedCertificates: revokedCount,  // 🔥 DIRECT revoked count
+        verifiedByCurrentInstitution: isCurrentAccountInstitution ? institutionSpecificVerifiedCount : 0,
+        revokedByCurrentInstitution: isCurrentAccountInstitution ? institutionSpecificRevokedCount : 0,
         issuedByCurrentInstitution: Number(currentInstitutionCount.toString()),
         activeInstitutionAddresses,
         lastUpdated: Date.now()

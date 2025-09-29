@@ -177,15 +177,11 @@ const Dashboard = () => {
     }
     
     try {
-      const [verifiedIds, pendingIds, revokedIds] = await Promise.all([
-        contract.getVerifiedCertificateIds(0, 1000).catch(() => []),
-        contract.getPendingCertificateIds(0, 1000).catch(() => []),
-        contract.getRevokedCertificateIds(0, 1000).catch(() => [])
-      ]);
+      // Iterate all tokens to avoid missing certificates that are both verified and revoked
+      const totalSupplyBN = await contract.totalSupply().catch(() => 0);
+      const totalSupply = Number(totalSupplyBN?.toString?.() || totalSupplyBN || 0);
       
-      const uniqueIds = Array.from(new Set([...(verifiedIds || []), ...(pendingIds || []), ...(revokedIds || [])]));
-      
-      if (uniqueIds.length === 0) {
+      if (totalSupply === 0) {
         setInstitutionAnalysis({
           institutions: [],
           averageCertsPerInstitution: 0
@@ -200,9 +196,20 @@ const Dashboard = () => {
       
       // Analyze all certificates to build institution profiles
       const batchSize = 200;
-      for (let i = 0; i < uniqueIds.length; i += batchSize) {
-        const batch = uniqueIds.slice(i, i + batchSize);
-        await Promise.all(batch.map(async (id) => {
+      for (let i = 0; i < totalSupply; i += batchSize) {
+        const indices = Array.from({ length: Math.min(batchSize, totalSupply - i) }, (_, k) => i + k);
+        // Resolve tokenIds for this batch
+        const idPromises = indices.map(async (idx) => {
+          try {
+            return await contract.tokenByIndex(idx);
+          } catch {
+            return null;
+          }
+        });
+        const ids = await Promise.all(idPromises);
+        const validIds = ids.filter(id => id !== null && id !== undefined);
+        
+        await Promise.all(validIds.map(async (id) => {
           try {
             const cert = await contract.getCertificate(id);
             if (cert && cert.institution) {
@@ -220,7 +227,10 @@ const Dashboard = () => {
               
               institutionPerformance[institutionAddress].total++;
               
-              if (cert.isVerified) {
+              // Correct classification: prioritize revoked over verified/pending
+              if (cert.isRevoked) {
+                institutionPerformance[institutionAddress].revoked++;
+              } else if (cert.isVerified) {
                 institutionPerformance[institutionAddress].verified++;
               } else {
                 institutionPerformance[institutionAddress].pending++;
@@ -232,26 +242,6 @@ const Dashboard = () => {
         }));
       }
 
-      // Get revoked certificates and adjust counts
-      try {
-        const revokedIds = await contract.getRevokedCertificateIds(0, 1000);
-        for (const id of revokedIds) {
-          try {
-            const cert = await contract.getCertificate(id);
-            if (cert && cert.institution) {
-              const institutionAddress = cert.institution.toLowerCase();
-              if (institutionPerformance[institutionAddress]) {
-                institutionPerformance[institutionAddress].revoked++;
-                institutionPerformance[institutionAddress].verified--; // Adjust verified count
-              }
-            }
-          } catch (error) {
-            console.warn(`Error fetching revoked certificate ${id}:`, error);
-          }
-        }
-      } catch (error) {
-        console.warn('Error fetching revoked certificates:', error);
-      }
 
       // Calculate institution list with real certificate counts
       const institutionList = [];
@@ -544,13 +534,13 @@ const Dashboard = () => {
                   <div className="flex justify-between mb-1">
                     <span className="text-xs text-gray-400">Verified</span>
                     <span className="text-xs font-mono text-indigo-300">
-                      {institutionStats?.verifiedCertificates || 0} / {institutionStats?.totalCertificates || 0}
+                      {isAdmin ? (institutionStats?.verifiedCertificates || 0) : isInstitution ? (institutionStats?.verifiedByCurrentInstitution || 0) : (institutionStats?.verifiedCertificates || 0)} / {isAdmin ? (institutionStats?.totalCertificates || 0) : isInstitution ? (institutionStats?.issuedByCurrentInstitution || 0) : (institutionStats?.totalCertificates || 0)}
                     </span>
                   </div>
                   <div className="w-full bg-gray-800/80 h-1.5 rounded-full overflow-hidden">
                     <div 
                       className="bg-gradient-to-r from-indigo-600 to-blue-500 h-full rounded-full"
-                      style={{ width: `${Math.min(100, ((institutionStats?.verifiedCertificates || 0) / Math.max(1, institutionStats?.totalCertificates || 1)) * 100)}%` }}
+                      style={{ width: `${Math.min(100, (((isAdmin ? (institutionStats?.verifiedCertificates || 0) : isInstitution ? (institutionStats?.verifiedByCurrentInstitution || 0) : (institutionStats?.verifiedCertificates || 0))) / Math.max(1, (isAdmin ? (institutionStats?.totalCertificates || 1) : isInstitution ? (institutionStats?.issuedByCurrentInstitution || 1) : (institutionStats?.totalCertificates || 1)))) * 100)}%` }}
                     ></div>
                   </div>
                 </div>
@@ -575,9 +565,7 @@ const Dashboard = () => {
                   <div>
                     <div className="flex justify-between mb-1">
                       <span className="text-xs text-gray-400">Issued by You</span>
-                      <span className="text-xs font-mono text-teal-300">
-                        {institutionStats?.issuedByCurrentInstitution || 0}
-                      </span>
+                      <span className="text-xs font-mono text-teal-300">{institutionStats?.issuedByCurrentInstitution || 0}</span>
                     </div>
                     <div className="w-full bg-gray-800/80 h-1.5 rounded-full overflow-hidden">
                       <div 
@@ -592,14 +580,12 @@ const Dashboard = () => {
                 <div>
                   <div className="flex justify-between mb-1">
                     <span className="text-xs text-gray-400">Pending Verification</span>
-                    <span className="text-xs font-mono text-amber-300">
-                      {institutionStats?.pendingCertificates || 0} / {institutionStats?.totalCertificates || 0}
-                    </span>
+                    <span className="text-xs font-mono text-amber-300">{institutionStats?.pendingCertificates || 0} / {isAdmin ? (institutionStats?.totalCertificates || 0) : isInstitution ? (institutionStats?.issuedByCurrentInstitution || 0) : (institutionStats?.totalCertificates || 0)}</span>
                   </div>
                   <div className="w-full bg-gray-800/80 h-1.5 rounded-full overflow-hidden">
                     <div 
                       className="bg-gradient-to-r from-amber-600 to-orange-500 h-full rounded-full"
-                      style={{ width: `${Math.min(100, ((institutionStats?.pendingCertificates || 0) / Math.max(1, institutionStats?.totalCertificates || 1)) * 100)}%` }}
+                      style={{ width: `${Math.min(100, ((institutionStats?.pendingCertificates || 0) / Math.max(1, (isAdmin ? (institutionStats?.totalCertificates || 1) : isInstitution ? (institutionStats?.issuedByCurrentInstitution || 1) : (institutionStats?.totalCertificates || 1)))) * 100)}%` }}
                     ></div>
                   </div>
                 </div>
@@ -609,13 +595,13 @@ const Dashboard = () => {
                   <div className="flex justify-between mb-1">
                     <span className="text-xs text-gray-400">Revoked Certificates</span>
                     <span className="text-xs font-mono text-red-300">
-                      {institutionStats?.revokedCertificates || 0} / {institutionStats?.totalCertificates || 0}
+                      {isAdmin ? (institutionStats?.revokedCertificates || 0) : isInstitution ? (institutionStats?.revokedByCurrentInstitution || 0) : (institutionStats?.revokedCertificates || 0)} / {isAdmin ? (institutionStats?.totalCertificates || 0) : isInstitution ? (institutionStats?.issuedByCurrentInstitution || 0) : (institutionStats?.totalCertificates || 0)}
                     </span>
                   </div>
                   <div className="w-full bg-gray-800/80 h-1.5 rounded-full overflow-hidden">
                     <div 
                       className="bg-gradient-to-r from-red-600 to-rose-500 h-full rounded-full"
-                      style={{ width: `${Math.min(100, ((institutionStats?.revokedCertificates || 0) / Math.max(1, institutionStats?.totalCertificates || 1)) * 100)}%` }}
+                      style={{ width: `${Math.min(100, (((isAdmin ? (institutionStats?.revokedCertificates || 0) : isInstitution ? (institutionStats?.revokedByCurrentInstitution || 0) : (institutionStats?.revokedCertificates || 0))) / Math.max(1, (isAdmin ? (institutionStats?.totalCertificates || 1) : isInstitution ? (institutionStats?.issuedByCurrentInstitution || 1) : (institutionStats?.totalCertificates || 1)))) * 100)}%` }}
                     ></div>
                   </div>
                 </div>
@@ -628,49 +614,37 @@ const Dashboard = () => {
                 {/* Certificate Status */}
                 <div className="flex justify-between items-center">
                   <span className="text-xs text-gray-400">Total Certificates</span>
-                  <span className="text-xs font-mono text-indigo-300">
-                    {(institutionStats?.totalCertificates || 0) > 0 ? institutionStats?.totalCertificates : '0'}
-                  </span>
+                  <span className="text-xs font-mono text-indigo-300">{isAdmin ? (institutionStats?.totalCertificates || 0) : isInstitution ? (institutionStats?.issuedByCurrentInstitution || 0) : (institutionStats?.totalCertificates || 0)}</span>
                 </div>
                 
                 {/* Verified Certificates */}
                 <div className="flex justify-between items-center">
                   <span className="text-xs text-gray-400">Verified Certificates</span>
-                  <span className="text-xs font-mono text-indigo-300">
-                    {(institutionStats?.verifiedCertificates || 0) > 0 ? institutionStats?.verifiedCertificates : '0'}
-                  </span>
+                  <span className="text-xs font-mono text-indigo-300">{isAdmin ? (institutionStats?.verifiedCertificates || 0) : isInstitution ? (institutionStats?.verifiedByCurrentInstitution || 0) : (institutionStats?.verifiedCertificates || 0)}</span>
                 </div>
                 
                 {/* Verification Rate */}
                 <div className="flex justify-between items-center">
                   <span className="text-xs text-gray-400">Verification Rate</span>
-                  <span className="text-xs font-mono text-green-400">
-                    {(institutionStats?.totalCertificates || 0) > 0 ? `${Math.floor(((institutionStats?.verifiedCertificates || 0) / Math.max(1, institutionStats?.totalCertificates || 1)) * 100)}%` : '0%'}
-                  </span>
+                  <span className="text-xs font-mono text-green-400">{isAdmin ? `${Math.floor(((institutionStats?.verifiedCertificates || 0) / Math.max(1, institutionStats?.totalCertificates || 1)) * 100)}%` : isInstitution ? `${Math.floor(((institutionStats?.verifiedByCurrentInstitution || 0) / Math.max(1, institutionStats?.issuedByCurrentInstitution || 1)) * 100)}%` : `${Math.floor(((institutionStats?.verifiedCertificates || 0) / Math.max(1, institutionStats?.totalCertificates || 1)) * 100)}%`}</span>
                 </div>
                 
                 {/* Pending Verification - DIRECT from contract */}
                 <div className="flex justify-between items-center">
                   <span className="text-xs text-gray-400">Pending Verification</span>
-                  <span className="text-xs font-mono text-amber-300">
-                    {institutionStats?.pendingCertificates || 0}
-                  </span>
+                  <span className="text-xs font-mono text-amber-300">{institutionStats?.pendingCertificates || 0}</span>
                 </div>
                 
                 {/* 🔥 NEW: Revoked Certificates metrics */}
                 <div className="flex justify-between items-center">
                   <span className="text-xs text-gray-400">Revoked Certificates</span>
-                  <span className="text-xs font-mono text-red-300">
-                    {institutionStats?.revokedCertificates || 0}
-                  </span>
+                  <span className="text-xs font-mono text-red-300">{isAdmin ? (institutionStats?.revokedCertificates || 0) : isInstitution ? (institutionStats?.revokedByCurrentInstitution || 0) : (institutionStats?.revokedCertificates || 0)}</span>
                 </div>
                 
                 {/* 🔥 NEW: Revocation Rate */}
                 <div className="flex justify-between items-center">
                   <span className="text-xs text-gray-400">Revocation Rate</span>
-                  <span className="text-xs font-mono text-red-400">
-                    {(institutionStats?.totalCertificates || 0) > 0 ? `${Math.floor(((institutionStats?.revokedCertificates || 0) / Math.max(1, institutionStats?.totalCertificates || 1)) * 100)}%` : '0%'}
-                  </span>
+                  <span className="text-xs font-mono text-red-400">{isAdmin ? `${Math.floor(((institutionStats?.revokedCertificates || 0) / Math.max(1, institutionStats?.totalCertificates || 1)) * 100)}%` : isInstitution ? `${Math.floor(((institutionStats?.revokedByCurrentInstitution || 0) / Math.max(1, institutionStats?.issuedByCurrentInstitution || 1)) * 100)}%` : `${Math.floor(((institutionStats?.revokedCertificates || 0) / Math.max(1, institutionStats?.totalCertificates || 1)) * 100)}%`}</span>
                 </div>
               </div>
               </div>
@@ -699,17 +673,13 @@ const Dashboard = () => {
                     {/* Total Certificates */}
                     <div className="flex justify-between items-center">
                       <span className="text-xs text-gray-400">Total Certificates</span>
-                      <span className="text-xs font-mono text-blue-300">
-                        {institutionStats?.totalCertificates || 0}
-                      </span>
+                      <span className="text-xs font-mono text-blue-300">{isAdmin ? (institutionStats?.totalCertificates || 0) : isInstitution ? (institutionStats?.issuedByCurrentInstitution || 0) : (institutionStats?.totalCertificates || 0)}</span>
                     </div>
                     
                     {/* Verified Count */}
                     <div className="flex justify-between items-center">
                       <span className="text-xs text-gray-400">Verified Count</span>
-                      <span className="text-xs font-mono text-blue-300">
-                        {institutionStats?.verifiedCertificates || 0}
-                      </span>
+                      <span className="text-xs font-mono text-blue-300">{isAdmin ? (institutionStats?.verifiedCertificates || 0) : isInstitution ? (institutionStats?.verifiedByCurrentInstitution || 0) : (institutionStats?.verifiedCertificates || 0)}</span>
                     </div>
                     
                     {/* Pending Verification - DIRECT from contract */}
@@ -723,9 +693,7 @@ const Dashboard = () => {
                     {/* 🔥 NEW: Revoked Certificates in verification analytics */}
                     <div className="flex justify-between items-center">
                       <span className="text-xs text-gray-400">Revoked Certificates</span>
-                      <span className="text-xs font-mono text-red-300">
-                        {institutionStats?.revokedCertificates || 0}
-                      </span>
+                      <span className="text-xs font-mono text-red-300">{isAdmin ? (institutionStats?.revokedCertificates || 0) : isInstitution ? (institutionStats?.revokedByCurrentInstitution || 0) : (institutionStats?.revokedCertificates || 0)}</span>
                     </div>
                     
                     {/* Contract data */}
@@ -871,7 +839,7 @@ const Dashboard = () => {
                       </div>
                       <div className="text-xl font-bold text-white">
                         {(institutionStats?.issuedByCurrentInstitution || 0) > 0 
-                          ? Math.floor(((institutionStats?.verifiedCertificates || 0) / (institutionStats?.issuedByCurrentInstitution || 1)) * 100)
+                          ? Math.floor(((institutionStats?.verifiedByCurrentInstitution || 0) / (institutionStats?.issuedByCurrentInstitution || 1)) * 100)
                           : 0}%
                       </div>
                       <div className="text-xs text-violet-400 mt-1">Verification rate</div>
@@ -889,7 +857,7 @@ const Dashboard = () => {
                       <div className="flex justify-between items-center">
                         <span className="text-xs text-gray-400">✓ Verified</span>
                         <span className="text-xs font-mono text-green-400">
-                          {institutionStats?.verifiedCertificates || 0}
+                          {institutionStats?.verifiedByCurrentInstitution || 0}
                         </span>
                       </div>
                       {/* Pending */}
@@ -903,7 +871,7 @@ const Dashboard = () => {
                       <div className="flex justify-between items-center">
                         <span className="text-xs text-gray-400">✗ Revoked</span>
                         <span className="text-xs font-mono text-red-400">
-                          {institutionStats?.revokedCertificates || 0}
+                          {institutionStats?.revokedByCurrentInstitution || 0}
                         </span>
                       </div>
                     </div>
